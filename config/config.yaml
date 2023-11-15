@@ -1,12 +1,7 @@
-data_directory: data/
+torch:
+  device: 'mps'
+  float_dtype: 'float32'
 
-
-batch_schema:
-  - name: id
-    type: uuid
-  - name: embedding
-    type: float32
-    shape: [384]
-  - name:
-
-document_schema:
+pinecone:
+  batch_size: 32
+  
