@@ -3,5 +3,9 @@ torch:
   float_dtype: 'float32'
 
 pinecone:
+  index_name: 'ismir2021'
+  embedding_length: 384
+  metric: 'cosine'
   batch_size: 32
+
   

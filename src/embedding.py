@@ -20,12 +20,12 @@ def mean_pooling(model_output, attention_mask):
     return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
 
 
-def get_embedding(input: str):
+def get_embeddings(input: List[str]):
     """
     This function takes an input string and returns the embedding of the input using the initialized model.
     If the model is not initialized, it will be initialized before generating the embedding.
     Args:
-        input (str): The input string to be embedded.
+        input List[str]: Input strings to be embedded.
     Returns:
         torch.Tensor: The embedding of the input string.
     """
