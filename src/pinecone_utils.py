@@ -8,16 +8,21 @@ load_dotenv()
 
 index = None
 
-def init_pineconeDB(index_name, embedding_length, metric='cosine'):
+def init_pineconeDB(config):
     """
     Initializes the PineconeDB index with the given parameters.
 
     Args:
-        index_name (str): The name of the index.
-        embedding_length (int): The length of the embedding vectors.
-        metric (str, optional): The distance metric to use. Dependent on embedding model used. Defaults to 'cosine'. 
+        config (dict): A dictionary containing the configuration parameters for initializing the PineconeDB index.
+            - index_name (str): The name of the index.
+            - embedding_length (int): The length of the embedding vectors.
+            - metric (str): The distance metric to be used.
+
+    Returns:
+        Dictionary of index statistics | None
     """
     global index
+    index_name = config['index_name']
 
     pinecone.init(
         api_key=os.getenv("PINECONE_API_KEY"),
@@ -27,32 +32,47 @@ def init_pineconeDB(index_name, embedding_length, metric='cosine'):
     if index_name not in pinecone.list_indexes():
         pinecone.create_index(
             index_name,
-            dimension=embedding_length,
-            metric=metric # dependent on model
+            dimension=config['embedding_length'],
+            metric=config['metric']
         )
         while not pinecone.describe_index(index_name).status['ready']:
             time.sleep(1)
 
     try:
         index = pinecone.Index(index_name)
-        index.describe_index_stats()
+        return index.describe_index_stats()
     except pinecone.exceptions.IndexNotFoundError:
-        print("Index does not exist.")
+        return None
     else:
         print(f"PineconeDB initialized. Index name: {index_name}")
+        return index.describe_index_stats()
 
 
 def get_index_stats():
     return index.describe_index_stats()
 
 
-def upsert_files(files):
+def upsert_documents(docs):
     """
     Upserts the given files into the Pinecone index.
     Requires (id: str, vector: List[float])
 
     Args:
-        files (list): A list of files to upsert.
+        docs (list): A list of files to upsert.
+            - each of the form:
+                {
+                    id: <str>,
+                    values: List[float],
+                    metadata: {
+                        type: "cluster"|"document"|"chunk",
+                        time_created: <datetime>,
+                        time_modified: <datetime>,
+                        hyperdocs: List[ids],
+                        hypodocs: List[ids],
+                        keywords: List[str]
+                    }
+
+                }
 
     Returns:
         bool: True if the upsert is successful, False otherwise.
@@ -61,15 +81,16 @@ def upsert_files(files):
     if not index:
         raise "Pinecone index not initialized. Run init_pineconeDB()"
 
+    docs_count = len(docs)
     batch_size = 32
-    for i in tqdm(range(0, len(files), batch_size)):
-        i_end = min(len(files), i+batch_size)
-        batch = files[i:i_end]
+    for i in tqdm(range(0, docs_count, batch_size)):
+        i_end = min(docs_count, i+batch_size)
+        batch = docs[i:i_end]
         index.upsert(vectors=batch)
     
     return True
 
-def vector_query(vector, k=3, _filter={}, include_values=False, include_metadata=True):
+def query(vector, k=3, _filter={}, include_values=False, include_metadata=True):
     """
     This function performs a query on the Pinecone index.
     Avoid include_metadata True when k ≥ 1000
@@ -97,6 +118,15 @@ def vector_query(vector, k=3, _filter={}, include_values=False, include_metadata
         filter=_filter,
         include_values=include_values,
         include_metadata=include_metadata
+    )
+
+    return response
+
+def retrieve_all_clusters():
+    response = index.query(
+        filter={
+            type: "cluster"
+        }
     )
 
     return response
