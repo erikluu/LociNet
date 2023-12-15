@@ -1,29 +1,38 @@
 from dataclasses import dataclass
+import embeddings as em
 import datetime
 import torch
+from nltk.tokenize import PunktParagraphTokenizer
 
 
-@dataclass
-class Section:
-    id: str
-    content: str
-    created: datetime.datetime
-    last_modified: datetime.datetime
-    embedding: torch.vector
-    key_phrases: list[str]
+paragraph_tokenizer = PunktParagraphTokenizer()
 
-    def edit(self, new_content):
-        self.content = new_content
+def parse_sections(text):
+    paragraphs = paragraph_tokenizeri.tokenize(text)
+    embeddings = em.get_embeddings(paragraphs)
+    return zip(paragraphs, embeddings)
 
 
-@dataclass
-class Document:
-    sections: list[Section]
-    last_modified: datetime.datetime
 
-    def writing_order():
-        pass
+def initialize_document(document):
+    id: document['title']
+    sections = parse_sections(document['text'])
+    created = datetime.datetime.now()
+    last_modified = created
+    return {
+        'id': id,
+        'sections': sections,
+        'created': created,
+        'last_modified': last_modified
+    }
 
 
-    def temporal_order():
-        pass
+if __name__ == "__main__":
+    with open("../data/XAI.txt", 'r') as f:
+        plain_text = f.read()
+    
+    doc = initialize_document(
+        {
+            'title': "XAI.txt",
+            'text': plain_text
+        })

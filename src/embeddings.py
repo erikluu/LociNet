@@ -2,7 +2,8 @@ import torch
 import torch.nn.functional as F
 from transformers import AutoTokenizer, AutoModel
 
-MODEL_ID = 'sentence-transformers/all-MiniLM-L6-v2'
+# MODEL_ID = 'sentence-transformers/all-MiniLM-L6-v2'
+MODEL_ID = 'sentence-transformers/all-mpnet-base-v2'
 tokenizer = None
 model = None
 
@@ -58,6 +59,9 @@ def get_embeddings(input: list[str]):
         tokenizer = AutoTokenizer.from_pretrained(MODEL_ID, use_fast=True)
         model = AutoModel.from_pretrained(MODEL_ID)
 
+    max_length = model.config.max_position_embeddings
+    print(max_length, tokenizer.model_max_length)
+
     encoded_input = tokenizer(input, padding=True, truncation=True, return_tensors='pt')
 
     with torch.no_grad():
@@ -69,7 +73,7 @@ def get_embeddings(input: list[str]):
 
 
 if __name__ == "__main__":
-    pass
+    get_embeddings(["hehe"])
 
 
 
