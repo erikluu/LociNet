@@ -6,6 +6,28 @@ MODEL_ID = 'sentence-transformers/all-MiniLM-L6-v2'
 tokenizer = None
 model = None
 
+def similarity_rankings(em0, em1, k=None, threshold=0.0):
+    """
+    Compute top-k cosine similarity between a set of embeddings and itself.
+
+    Args:
+        sections (torch.Tensor): Tensor containing embeddings of sections to cite.
+        references (torch.Tensor): Tensor containing possible reference embeddings.
+        k (int): Number of top similarities to retrieve for each section.
+    Returns:
+        dict: A dictionary where keys are indices of sections,
+              and values are lists of tuples containing top-k values and indices from the references.
+    """
+    assert em0.size(-1) == em1.size(-1), f"Dimensions of em0 ({em0.size(-1)}) and em1 ({em1.size(-1)}) do not match."
+
+    cosine_similarity_matrix = F.cosine_similarity(em0.unsqueeze(1), em1.unsqueeze(0), dim=2)
+    rankings = torch.argsort(cosine_similarity_matrix, dim=1, descending=True)
+    rankings = rankings[:, :k] if k else rankings
+    rankings = rankings[cosine_similarity_matrix > threshold]
+    
+    return rankings
+
+
 def mean_pooling(model_output, attention_mask):
     """
     This function takes the model output and attention mask as input and performs mean pooling on the token embeddings.
@@ -44,6 +66,10 @@ def get_embeddings(input: list[str]):
     sentence_embeddings = mean_pooling(model_output, encoded_input['attention_mask'])
     sentence_embeddings = F.normalize(sentence_embeddings, p=2, dim=1)
     return sentence_embeddings
+
+
+if __name__ == "__main__":
+    pass
 
 
 
