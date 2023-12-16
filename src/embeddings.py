@@ -7,17 +7,18 @@ MODEL_ID = 'sentence-transformers/all-mpnet-base-v2'
 tokenizer = None
 model = None
 
-def similarity_rankings(em0, em1, k=None, threshold=0.0):
+def similarity_rankings_2D(em0, em1, k=None, threshold=0.0):
     """
-    Compute top-k cosine similarity between a set of embeddings and itself.
+    Compute top-k cosine similarity between two sets of embeddings.
 
     Args:
-        sections (torch.Tensor): Tensor containing embeddings of sections to cite.
-        references (torch.Tensor): Tensor containing possible reference embeddings.
-        k (int): Number of top similarities to retrieve for each section.
+        em0 (torch.Tensor): Tensor containing the first set of embeddings.
+        em1 (torch.Tensor): Tensor containing the second set of embeddings.
+        k (int, optional): Number of top similarities to retrieve for each embedding in em0. If None, all similarities are returned.
+        threshold (float, optional): Minimum similarity score to consider. Default is 0.0.
     Returns:
-        dict: A dictionary where keys are indices of sections,
-              and values are lists of tuples containing top-k values and indices from the references.
+        torch.Tensor: A tensor where each row corresponds to an embedding in em0,
+                      and contains the indices of the top-k most similar embeddings in em1.
     """
     assert em0.size(-1) == em1.size(-1), f"Dimensions of em0 ({em0.size(-1)}) and em1 ({em1.size(-1)}) do not match."
 
@@ -58,9 +59,6 @@ def get_embeddings(input: list[str]):
         print("Initalizing Tokenizer and Model")
         tokenizer = AutoTokenizer.from_pretrained(MODEL_ID, use_fast=True)
         model = AutoModel.from_pretrained(MODEL_ID)
-
-    max_length = model.config.max_position_embeddings
-    print(max_length, tokenizer.model_max_length)
 
     encoded_input = tokenizer(input, padding=True, truncation=True, return_tensors='pt')
 
