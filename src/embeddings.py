@@ -7,7 +7,7 @@ MODEL_ID = 'sentence-transformers/all-mpnet-base-v2'
 tokenizer = None
 model = None
 
-def similarity_rankings_2D(em0, em1, k=None, threshold=0.0):
+def similarity_rankings_2d(em0, em1, k=None, threshold=0.0):
     """
     Compute top-k cosine similarity between two sets of embeddings.
 
@@ -71,7 +71,7 @@ def get_embeddings(input: list[str]):
 
 
 if __name__ == "__main__":
-    get_embeddings(["hehe"])
+    get_embeddings(["This is a test sentence.", "I can resist everything except temptation"])
 
 
 
