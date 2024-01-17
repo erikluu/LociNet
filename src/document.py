@@ -8,7 +8,7 @@ from nltk.tokenize import PunktParagraphTokenizer
 paragraph_tokenizer = PunktParagraphTokenizer()
 
 def parse_sections(text):
-    paragraphs = paragraph_tokenizeri.tokenize(text)
+    paragraphs = paragraph_tokenizer.tokenize(text)
     embeddings = em.get_embeddings(paragraphs)
     return zip(paragraphs, embeddings)
 
