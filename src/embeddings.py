@@ -7,7 +7,7 @@ MODEL_ID = 'sentence-transformers/all-mpnet-base-v2'
 tokenizer = None
 model = None
 
-def similarity_rankings_2d(em0, em1, k=None, threshold=0.0):
+def similarity_rankings_2d(em0, em1, k=None):
     """
     Compute top-k cosine similarity between two sets of embeddings.
 
@@ -15,7 +15,6 @@ def similarity_rankings_2d(em0, em1, k=None, threshold=0.0):
         em0 (torch.Tensor): Tensor containing the first set of embeddings.
         em1 (torch.Tensor): Tensor containing the second set of embeddings.
         k (int, optional): Number of top similarities to retrieve for each embedding in em0. If None, all similarities are returned.
-        threshold (float, optional): Minimum similarity score to consider. Default is 0.0.
     Returns:
         torch.Tensor: A tensor where each row corresponds to an embedding in em0,
                       and contains the indices of the top-k most similar embeddings in em1.
@@ -25,7 +24,6 @@ def similarity_rankings_2d(em0, em1, k=None, threshold=0.0):
     cosine_similarity_matrix = F.cosine_similarity(em0.unsqueeze(1), em1.unsqueeze(0), dim=2)
     rankings = torch.argsort(cosine_similarity_matrix, dim=1, descending=True)
     rankings = rankings[:, :k] if k else rankings
-    rankings = rankings[cosine_similarity_matrix > threshold]
     
     return rankings
 
