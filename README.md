@@ -17,7 +17,7 @@ General Pipeline
 2. Cluster data (hierarchical) + generate labels (summaries)
 3. Connect into directional graph
     
-![Clusters](assets/clusters.png)
+<img src="assets/clusters.png" alt="clusters" width="200" height="200"/>
 
 Metrics
 - How well a human or AI agent can find a document based on a goal query
