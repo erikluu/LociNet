@@ -1,4 +1,5 @@
 .env
 data/anthonys-second-brain
 data/medium_articles.csv
+data/medium_1000.csv
 data/notebook
