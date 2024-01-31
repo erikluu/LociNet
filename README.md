@@ -10,7 +10,7 @@ The method of loci is a strategy for memory enhancement, which uses visualizatio
 Developing a dynamic knowledge graph system to enhance user and machine recall and content exploration.
 Utilizing ML techniques, including semantic latent space models, dimensionality reduction, embeddings and geometric graph theory to analyze relationships between user-generated media chunks and external databases to provide content and structural recommendations. Prior work: [LociMaps](https://github.com/loci-maps/mini-map).
 
-## Ideas:
+## Ideas
 
 General Pipeline
 1. Embed data
@@ -23,7 +23,7 @@ Metrics
 - How well a human or AI agent can find a document based on a goal query
 - Cooccurence of human vs AI tags: "Group X and Y overlap by this much in B subbranches"
 
-Data Simplification - Tags:
+Data Simplification - Tags
 - [tag]: [article it is summarizing] -> embedding
 - k (20?) clusters
 - assign label
