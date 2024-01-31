@@ -21,11 +21,11 @@ def similarity_rankings_2d(em0, em1, k=None):
     """
     assert em0.size(-1) == em1.size(-1), f"Dimensions of em0 ({em0.size(-1)}) and em1 ({em1.size(-1)}) do not match."
 
-    cosine_similarity_matrix = F.cosine_similarity(em0.unsqueeze(1), em1.unsqueeze(0), dim=2)
-    rankings = torch.argsort(cosine_similarity_matrix, dim=1, descending=True)
+    similarity_matrix = F.cosine_similarity(em0.unsqueeze(1), em1.unsqueeze(0), dim=2)
+    rankings = torch.argsort(similarity_matrix, dim=1, descending=True)
     rankings = rankings[:, :k] if k else rankings
     
-    return rankings
+    return rankings, similarity_matrix
 
 
 def mean_pooling(model_output, attention_mask):
