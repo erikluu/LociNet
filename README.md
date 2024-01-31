@@ -17,12 +17,7 @@ General Pipeline
 2. Cluster data (hierarchical) + generate labels (summaries)
 3. Connect into directional graph
     
-         /--------------> 2 ------> d2     
-         |     
-    0 ---|      
-         |           /-----> d1     
-          \--> 1 ----|      
-                     \--------> d0     
+<iframe style="border:none" width="800" height="450" src="https://whimsical.com/embed/VtzoFyZsgNpUuhVSNDU8W5"></iframe>
 
 Metrics
 - How well a human or AI agent can find a document based on a goal query
