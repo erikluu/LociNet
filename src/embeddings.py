@@ -31,7 +31,7 @@ def similarity_rankings_2d(em0, em1, k=None):
     return rankings, similarity_matrix
 
 
-def batch_similarity_rankings_2d(em0, em1, k=None, batch_size=32, save_path=None):
+def batch_similarity_rankings_2d(em0, em1, batch_size=32, save_path=None):
     assert em0.size(-1) == em1.size(-1), f"Batch: Dimensions of em0 ({em0.size(-1)}) and em1 ({em1.size(-1)}) do not match." 
 
     similarity_matrix = torch.empty(0)
@@ -46,6 +46,11 @@ def batch_similarity_rankings_2d(em0, em1, k=None, batch_size=32, save_path=None
         similarity_matrix = torch.cat((similarity_matrix, batch_similarity_matrix))
 
     return similarity_matrix
+
+
+def argsort(matrix, k=None):
+    rankings = torch.argsort(matrix, dim=1, descending=True)
+    return rankings[:, :k] if k else rankings
 
 
 def mean_pooling(model_output, attention_mask):
