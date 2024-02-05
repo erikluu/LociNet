@@ -19,13 +19,15 @@ General Pipeline
     
 <img src="assets/clusters.png" alt="clusters" width="250" height="250"/>
 
-Metrics
-- How well a human or AI agent can find a document based on a goal query
-- Cooccurence of human vs AI tags: "Group X and Y overlap by this much in B subbranches"
-
 Data Simplification - Tags
 - [tag]: [article it is summarizing] -> embedding
 - k (20?) clusters
 - assign label
+
+Metrics and Analysis
+- How well a human or AI agent can find a document based on a goal query
+- Cooccurence of human vs AI tags: "Group X and Y overlap by this much in B subbranches"
+- Compare title + text vs. text vs. title
+
 
 

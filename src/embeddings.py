@@ -1,5 +1,7 @@
 import torch
 import torch.nn.functional as F
+import numpy as np
+from tqdm import tqdm
 from transformers import AutoTokenizer, AutoModel
 
 # MODEL_ID = 'sentence-transformers/all-MiniLM-L6-v2'
@@ -67,9 +69,34 @@ def get_embeddings(input: list[str]):
     sentence_embeddings = F.normalize(sentence_embeddings, p=2, dim=1)
     return sentence_embeddings
 
+def batch_embeddings(strings: np.array, batch_size=32, save_path=None):
+    """
+    This function takes a list of strings and a batch size as input, and returns the embeddings of the strings.
+    The embeddings are calculated in batches to optimize memory usage.
+    If a save path is provided, the embeddings are saved to the specified path after each batch. Use .pt files.
+    Args:
+        strings (list[str]): The strings to be embedded.
+        batch_size (int, optional): The size of the batches.
+        save_path (str, optional): The path where the embeddings should be saved. If None, the embeddings are not saved.
+    Returns:
+        torch.Tensor: The embeddings of the input strings.
+    """
+    embeddings = []
+    for i in tqdm(range(0, len(strings), batch_size)):
+        batch = strings[i: i+batch_size]
+        batch_embeddings = get_embeddings(batch)
+
+        embeddings.append(batch_embeddings)
+        if save_path:
+            torch.save(torch.cat(embeddings, dim=0), save_path)
+    
+    embeddings = torch.cat(embeddings, dim=0)
+
+    return embeddings
+
 
 if __name__ == "__main__":
-    get_embeddings(["This is a test sentence.", "I can resist everything except temptation"])
+    get_embeddings(["This is a test sentence.", "Speak softly and carry a big stick."])
 
 
 
