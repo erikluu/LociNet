@@ -1,6 +1,5 @@
 import torch
 import torch.nn.functional as F
-import numpy as np
 from tqdm import tqdm
 from transformers import AutoTokenizer, AutoModel
 
@@ -20,14 +19,33 @@ def similarity_rankings_2d(em0, em1, k=None):
     Returns:
         torch.Tensor: A tensor where each row corresponds to an embedding in em0,
                       and contains the indices of the top-k most similar embeddings in em1.
+        torch.Tensor: A tensor where each row corresponds to an embedding in em0,
+                      and contains the direct similarity metric in em1.
     """
     assert em0.size(-1) == em1.size(-1), f"Dimensions of em0 ({em0.size(-1)}) and em1 ({em1.size(-1)}) do not match."
 
     similarity_matrix = F.cosine_similarity(em0.unsqueeze(1), em1.unsqueeze(0), dim=2)
-    rankings = torch.argsort(similarity_matrix, dim=1, descending=True)
+    rankings = torch.argsort(similarity_matrix, dim=1, descending=True) # doesn't sort similarity_matrix
     rankings = rankings[:, :k] if k else rankings
     
     return rankings, similarity_matrix
+
+
+def batch_similarity_rankings_2d(em0, em1, k=None, batch_size=32, save_path=None):
+    assert em0.size(-1) == em1.size(-1), f"Batch: Dimensions of em0 ({em0.size(-1)}) and em1 ({em1.size(-1)}) do not match." 
+
+    similarity_matrix = torch.empty(0)
+    for i in tqdm(range(0, len(em0), batch_size)):
+        batch_similarity_matrix = torch.empty(0)
+        batch0 = em0[i:i+batch_size]
+        for j in range(0, len(em1), batch_size):
+            batch1 = em1[j:j+batch_size]
+            _, batch_batch_similarity_matrix = similarity_rankings_2d(batch0, batch1) # haha
+            batch_similarity_matrix = torch.cat((batch_similarity_matrix, batch_batch_similarity_matrix), dim=1)
+    
+        similarity_matrix = torch.cat((similarity_matrix, batch_similarity_matrix))
+
+    return similarity_matrix
 
 
 def mean_pooling(model_output, attention_mask):
@@ -69,11 +87,11 @@ def get_embeddings(input: list[str]):
     sentence_embeddings = F.normalize(sentence_embeddings, p=2, dim=1)
     return sentence_embeddings
 
-def batch_embeddings(strings: np.array, batch_size=32, save_path=None):
+def batch_embeddings(strings, batch_size=32, save_path=None):
     """
     This function takes a list of strings and a batch size as input, and returns the embeddings of the strings.
     The embeddings are calculated in batches to optimize memory usage.
-    If a save path is provided, the embeddings are saved to the specified path after each batch. Use .pt files.
+    If a save path is provided, the embeddings are saved to the specified path after each batch. Use <name>.pt files.
     Args:
         strings (list[str]): The strings to be embedded.
         batch_size (int, optional): The size of the batches.
@@ -96,7 +114,14 @@ def batch_embeddings(strings: np.array, batch_size=32, save_path=None):
 
 
 if __name__ == "__main__":
-    get_embeddings(["This is a test sentence.", "Speak softly and carry a big stick."])
+    # print(get_embeddings(["This is a test sentence.", "I can resist everything except temptation"]))
+    matrix1 = torch.randn(64, 256)
+    matrix2 = torch.randn(64, 256)
+    _,sim_mat = similarity_rankings_2d(matrix1, matrix2)
+    batch_sim_mat = batch_similarity_rankings_2d(matrix1, matrix2)
+    assert torch.equal(sim_mat, batch_sim_mat)   
+
+
 
 
 
