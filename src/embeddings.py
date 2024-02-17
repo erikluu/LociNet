@@ -82,4 +82,5 @@ if __name__ == "__main__":
     strings = ["Hello, my name is Erik.", "What is that song called?",
                "Tell me the name of that song.", "What year was that song made?"]
     
-    print(batch_embeddings(strings, tokenizer, model))
+    embeddings = batch_embeddings(strings, tokenizer, model)
+    print(embeddings.size(), embeddings)

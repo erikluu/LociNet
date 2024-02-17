@@ -4,11 +4,10 @@ import clustering as clus
 
 # MODEL_ID = 'sentence-transformers/all-MiniLM-L6-v2'
 
-
 def compose(*functions):
     def composed_function(data):
         result = data
-        for function in reversed(functions):
+        for function in functions:
             result = function(result)
         return result
     return composed_function
