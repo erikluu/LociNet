@@ -1,7 +1,14 @@
 import torch
 import torch.nn.functional as F
+from tqdm import tqdm
 
-def similarity_rankings_2d(em, k=None):
+
+def argsort(matrix: torch.Tensor, k: int = None) -> torch.Tensor:
+    rankings = torch.argsort(matrix, dim=1, descending=True)
+    return rankings[:, :k] if k else rankings
+
+
+def similarity_rankings(em: torch.Tensor, k=None):
     """
     Compute top-k cosine similarity between a set of embeddings and itself.
 
@@ -21,30 +28,37 @@ def similarity_rankings_2d(em, k=None):
     return rankings, similarity_matrix
 
 
-def batch_similarity_rankings_generator(em, batch_size=32):
-    for i in range(0, len(em), batch_size):
-        batch = em[i:i+batch_size]
-        _, batch_similarity_matrix = similarity_rankings_2d(batch)
-        yield batch_similarity_matrix
+def similarity_rankings_helper(em0, em1, k=None):
+    """
+    Just takes two parameters instead
+    """
+    assert em0.size(-1) == em1.size(-1), f"Dimensions of em0 ({em0.size(-1)}) and em1 ({em1.size(-1)}) do not match."
 
-
-def batch_similarity_rankings(em, batch_size=32, save_path=None):
-    similarity_matrices = []
-    for similarity_matrix in batch_similarity_rankings(em, batch_size=32):
-        similarity_matrices.append(similarity_matrix)
+    similarity_matrix = F.cosine_similarity(em0.unsqueeze(1), em1.unsqueeze(0), dim=2)
+    rankings = torch.argsort(similarity_matrix, dim=1, descending=True) # doesn't sort similarity_matrix
+    rankings = rankings[:, :k] if k else rankings
     
-    return torch.cat(similarity_matrices, dim=0)
+    return rankings, similarity_matrix
 
 
-def argsort(matrix, k=None):
-    rankings = torch.argsort(matrix, dim=1, descending=True)
-    return rankings[:, :k] if k else rankings
+def batch_similarity_rankings(em, batch_size=32):
+    similarity_matrix = torch.empty(0)
+    for i in tqdm(range(0, len(em), batch_size), desc="Embedding Similarity"):
+        batch_similarity_matrix = torch.empty(0)
+        batch0 = em[i:i+batch_size]
+        for j in range(0, len(em), batch_size):
+            batch1 = em[j:j+batch_size]
+            _, batch_batch_similarity_matrix = similarity_rankings_helper(batch0, batch1) # haha
+            batch_similarity_matrix = torch.cat((batch_similarity_matrix, batch_batch_similarity_matrix), dim=1)
+    
+        similarity_matrix = torch.cat((similarity_matrix, batch_similarity_matrix))
+
+    return similarity_matrix
 
 
 if __name__ == "__main__":
-    matrix1 = torch.randn(384, 10000)
-    matrix2 = torch.randn(384, 10000)
-    _, sim_mat = similarity_rankings_2d(matrix1, matrix2)
-    batch_sim_mat = batch_similarity_rankings(matrix1, matrix2, batch_size=32)
-
+    matrix1 = torch.randn(100, 1000)
+    matrix2 = torch.randn(100, 1000)
+    _, sim_mat = similarity_rankings(matrix1)
+    batch_sim_mat = batch_similarity_rankings(matrix1)
     assert torch.equal(sim_mat, batch_sim_mat)

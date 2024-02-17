@@ -2,9 +2,17 @@ import torch
 import torch.nn.functional as F
 from tqdm import tqdm
 from transformers import AutoTokenizer, AutoModel
+from typing import Optional, Tuple
 
 
-def mean_pooling(model_output, attention_mask):
+def initialize_embedding_model(model_id: str):
+    print("Initalizing Tokenizer and Model")
+    tokenizer = AutoTokenizer.from_pretrained(model_id, use_fast=True)
+    model = AutoModel.from_pretrained(model_id)
+    return tokenizer, model
+
+
+def mean_pooling(model_output: tuple, attention_mask: torch.Tensor) -> torch.Tensor:
     """
     This function takes the model output and attention mask as input and performs mean pooling on the token embeddings.
     Args:
@@ -18,14 +26,7 @@ def mean_pooling(model_output, attention_mask):
     return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
 
 
-def initialize_embedding_model(model_id):
-    print("Initalizing Tokenizer and Model")
-    tokenizer = AutoTokenizer.from_pretrained(model_id, use_fast=True)
-    model = AutoModel.from_pretrained(model_id)
-    return tokenizer, model
-
-
-def get_embeddings(input: list[str], tokenizer, model):
+def get_embeddings(input: list[str], tokenizer: AutoTokenizer, model: AutoModel) -> torch.Tensor:
     """
     This function takes an input string and returns the embedding of the input using the initialized model.
     If the model is not initialized, it will be initialized before generating the embedding.
@@ -45,7 +46,7 @@ def get_embeddings(input: list[str], tokenizer, model):
     return sentence_embeddings
 
 
-def batch_embeddings(input: list[str], tokenizer, model, batch_size=32, save_path=None):
+def batch_embeddings(input: list[str], tokenizer: AutoTokenizer, model: AutoModel, batch_size: int = 32, save_path: str = None) -> torch.Tensor:
     """
     This function takes a list of strings and a batch size as input, and returns the embeddings of the strings.
     The embeddings are calculated in batches to optimize memory usage.
@@ -58,9 +59,12 @@ def batch_embeddings(input: list[str], tokenizer, model, batch_size=32, save_pat
         torch.Tensor: The embeddings of the input strings.
     """
     embeddings = []
-    for i in tqdm(range(0, len(input), batch_size)):
+    pbar = tqdm(range(0, len(input), batch_size))
+    for i in pbar:
         batch = input[i: i+batch_size]
-        batch_embeddings = get_embeddings(batch)
+        batch_embeddings = get_embeddings(batch, tokenizer, model)
+
+        pbar.set_description(f"Processing: {batch[0][:20]}...")
 
         embeddings.append(batch_embeddings)
         if save_path:
@@ -72,4 +76,10 @@ def batch_embeddings(input: list[str], tokenizer, model, batch_size=32, save_pat
 
 
 if __name__ == "__main__":
-    pass
+    model_id = 'sentence-transformers/all-MiniLM-L6-v2'
+    tokenizer, model = initialize_embedding_model(model_id)
+
+    strings = ["Hello, my name is Erik.", "What is that song called?",
+               "Tell me the name of that song.", "What year was that song made?"]
+    
+    print(batch_embeddings(strings, tokenizer, model))

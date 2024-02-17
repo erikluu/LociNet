@@ -6,3 +6,6 @@ Notes:
 
 
 def knn(rankings, similarity_matrix, k=8, threshold=None):
+    pass
+
+
