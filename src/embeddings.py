@@ -11,15 +11,15 @@ tokenizer = None
 model = None
 
 def batch_size_estimate(em_size, num_em_sets=1):
-    mem_req_per_embedding_bytes = em_size[-1] * 4 * num_em_sets # req memory in bytes
+    mem_req_per_embedding_bytes = em_size.size(-1) * 4 * num_em_sets # req memory in bytes
     mem_req_per_embedding_gbytes = mem_req_per_embedding_bytes / (1024**3) # req memory in GB
     
     mem = psutil.virtual_memory()
     available_mem = mem.available / (1024**3) # available memory in GB
     max_embeddings_in_memory = available_mem / mem_req_per_embedding_gbytes
 
-    batch_size = max_embeddings_in_memory // 4 # set to a quarter of max
-    return batch_size
+    batch_size = max_embeddings_in_memory // 100 # set to a quarter of max
+    return int(batch_size)
 
 
 def similarity_rankings_2d(em0, em1, k=None):
@@ -106,6 +106,7 @@ def get_embeddings(input: list[str]):
     sentence_embeddings = F.normalize(sentence_embeddings, p=2, dim=1)
     return sentence_embeddings
 
+
 def batch_embeddings(strings, batch_size=32, save_path=None):
     """
     This function takes a list of strings and a batch size as input, and returns the embeddings of the strings.
@@ -137,12 +138,22 @@ def batch_embeddings(strings, batch_size=32, save_path=None):
 
 
 if __name__ == "__main__":
-    # print(get_embeddings(["This is a test sentence.", "I can resist everything except temptation"]))
-    matrix1 = torch.randn(64, 256)
-    matrix2 = torch.randn(64, 256)
-    _,sim_mat = similarity_rankings_2d(matrix1, matrix2)
-    batch_sim_mat = batch_similarity_rankings_2d(matrix1, matrix2)
-    assert torch.equal(sim_mat, batch_sim_mat)   
+    import time
+
+    matrix1 = torch.randn(384, 10000)
+    matrix2 = torch.randn(384, 10000)
+    _, sim_mat = similarity_rankings_2d(matrix1, matrix2)
+    # batch_size = batch_size_estimate(matrix1, num_em_sets=1)
+    # print(f"Batch Size: {batch_size}") # it's so much slower lmao
+    # t0 = time.time()
+    batch_sim_mat = batch_similarity_rankings_2d(matrix1, matrix2, batch_size=32)
+    # t1 = time.time()
+    # batch_sim_mat = batch_similarity_rankings_2d(matrix1, matrix2, batch_size=batch_size)
+    # t2 = time.time()
+    # print(f"{t1 - t0}")
+    # print(f"{t2- t1}")
+
+    assert torch.equal(sim_mat, batch_sim_mat)
 
 
 
