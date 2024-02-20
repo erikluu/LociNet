@@ -6,9 +6,10 @@ from typing import Optional, Tuple
 
 
 def initialize_embedding_model(model_id: str):
-    print("Initalizing Tokenizer and Model")
+    if not AutoTokenizer.from_pretrained(model_id, use_fast=True).is_fast: # is cached check
+        print("Initalizing Tokenizer and Model")
     tokenizer = AutoTokenizer.from_pretrained(model_id, use_fast=True)
-    model = AutoModel.from_pretrained(model_id)
+    model = AutoModel.from_pretrained(model_id, return_dict=True)
     return tokenizer, model
 
 
@@ -21,7 +22,7 @@ def mean_pooling(model_output: tuple, attention_mask: torch.Tensor) -> torch.Ten
     Returns:
         torch.Tensor: The mean-pooled token embeddings.
     """
-    token_embeddings = model_output[0]
+    token_embeddings = model_output.last_hidden_state
     input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
     return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
 
@@ -64,7 +65,7 @@ def batch_embeddings(input: list[str], tokenizer: AutoTokenizer, model: AutoMode
         batch = input[i: i+batch_size]
         batch_embeddings = get_embeddings(batch, tokenizer, model)
 
-        pbar.set_description(f"Processing: {batch[0][:20]}...")
+        pbar.set_description(f"Processing batch: {batch[0][:20]}...")
 
         embeddings.append(batch_embeddings)
         if save_path:
@@ -83,4 +84,5 @@ if __name__ == "__main__":
                "Tell me the name of that song.", "What year was that song made?"]
     
     embeddings = batch_embeddings(strings, tokenizer, model)
-    print(embeddings.size(), embeddings)
+    print(embeddings.size())
+    print(embeddings)

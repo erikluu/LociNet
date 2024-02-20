@@ -1,11 +1,5 @@
-"""
-Notes: 
-* Coarsening a graph?
-* Instead of having an edge yes or no, have cosine similarity be a weighted edge?
-"""
+# https://github.com/rusty1s/pytorch_cluster
+import torch_cluster as tc
 
-
-def knn(rankings, similarity_matrix, k=8, threshold=None):
+def graclus_cluster():
     pass
-
-
