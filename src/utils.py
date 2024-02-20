@@ -1,4 +1,11 @@
+import torch
 import psutil
+
+
+def argsort(matrix: torch.Tensor, k: int = None) -> torch.Tensor:
+    rankings = torch.argsort(matrix, dim=1, descending=True)
+    return rankings[:, :k] if k else rankings
+
 
 def batch_size_estimate(em_size, num_em_sets=1):
     mem_req_per_embedding_bytes = em_size.size(-1) * 4 * num_em_sets # req memory in bytes

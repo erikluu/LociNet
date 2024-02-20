@@ -1,5 +1,12 @@
+import torch
+from src.utils import argsort
+
 # https://github.com/rusty1s/pytorch_cluster
 import torch_cluster as tc
 
-def graclus_cluster():
-    pass
+
+def knn(matrix: torch.Tennsor, k=10):
+    rankings = argsort(matrix, k)
+    nearest_neighbors = rankings[:, 1:k] # not including itself, or should there be a link to itself...
+    return nearest_neighbors
+

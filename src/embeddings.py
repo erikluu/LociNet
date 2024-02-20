@@ -2,7 +2,6 @@ import torch
 import torch.nn.functional as F
 from tqdm import tqdm
 from transformers import AutoTokenizer, AutoModel
-from typing import Optional, Tuple
 
 
 def initialize_embedding_model(model_id: str):
