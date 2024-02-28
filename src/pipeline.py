@@ -1,6 +1,6 @@
 import embeddings as embed
 import similarity as sim
-import clustering as clus
+import clustering as clu
 
 
 def compose(*functions):
@@ -26,7 +26,9 @@ if __name__ == "__main__":
 
     pipeline = make_pipeline(
                      lambda data: embed.batch_embeddings(data, tokenizer, model),
-                     sim.batch_similarity_rankings)
+                     sim.batch_similarity_scores,
+                     clu.knn
+                    )
     
     output = pipeline(data)
     
