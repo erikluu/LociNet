@@ -2,7 +2,7 @@ import torch
 from utils import argsort
 
 # https://github.com/rusty1s/pytorch_cluster
-import torch_cluster as tc
+# import torch_cluster as tc
 
 
 def knn(matrix: torch.Tensor, k=10):

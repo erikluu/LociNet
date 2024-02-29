@@ -1,7 +1,9 @@
 import embeddings as embed
 import similarity as sim
-import clustering as clu
+import graph_generation as gg
 
+import networkx as nx
+import matplotlib.pyplot as plt
 
 def compose(*functions):
     def composed_function(data):
@@ -17,8 +19,10 @@ def make_pipeline(*functions):
 
 
 if __name__ == "__main__":
-    data = ["Hello, my name is Erik.", "What is that song called?",
-               "Tell me the name of that song.", "What year was that song made?"]
+    data = [(141, "Hello, my name is Erik."), (58, "What is that song called?"),
+               (117, "Tell me the name of that song."), (6, "What year was that song made?")]
+    ids = [id for id, _ in data]
+    strings = [s for _, s in data]
     
     model_id = 'sentence-transformers/all-mpnet-base-v2'
     # model_id = 'sentence-transformers/all-MiniLM-L6-v2'
@@ -27,12 +31,20 @@ if __name__ == "__main__":
     pipeline = make_pipeline(
                      lambda data: embed.batch_embeddings(data, tokenizer, model),
                      sim.batch_similarity_scores,
-                     clu.knn
+                     lambda data: gg.knn_graph(data, ids)
                     )
     
-    output = pipeline(data)
+    G = pipeline(strings)
+
+    pos = nx.circular_layout(G)  # Define the layout for the nodes
+    nx.draw(G, pos, with_labels=True, node_size=700, font_size=10)  # Draw the nodes with labels
+    edge_labels = nx.get_edge_attributes(G, 'weight')  # Get edge weights
+    nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels)  # Draw edge labels
+
+    # Display the graph
+    plt.show()
     
-    print(f"Output:\n{output}")
+    print(f"Output:\n{G}")
     
 
 

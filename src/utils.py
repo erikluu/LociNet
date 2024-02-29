@@ -7,6 +7,12 @@ def argsort(matrix: torch.Tensor, k: int = None) -> torch.Tensor:
     return rankings[:, :k] if k else rankings
 
 
+def sort_matrix_values(matrix: torch.Tensor, k: int = None) -> (torch.Tensor, torch.Tensor):
+    sorted_indices = torch.argsort(matrix, dim=1, descending=True)
+    sorted_values = torch.gather(matrix, 1, sorted_indices)
+    return sorted_indices[:, :k] if k else sorted_indices, sorted_values[:, :k] if k else sorted_values
+
+
 def batch_size_estimate(em_size, num_em_sets=1):
     mem_req_per_embedding_bytes = em_size.size(-1) * 4 * num_em_sets # req memory in bytes
     mem_req_per_embedding_gbytes = mem_req_per_embedding_bytes / (1024**3) # req memory in GB
