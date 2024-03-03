@@ -1,9 +1,10 @@
+import pandas as pd
+import networkx as nx
+import matplotlib.pyplot as plt
+
 import embeddings as embed
 import similarity as sim
 import graph_generation as gg
-
-import networkx as nx
-import matplotlib.pyplot as plt
 
 def compose(*functions):
     def composed_function(data):
@@ -19,8 +20,13 @@ def make_pipeline(*functions):
 
 
 if __name__ == "__main__":
-    data = [(141, "Hello, my name is Erik."), (58, "What is that song called?"),
-               (117, "Tell me the name of that song."), (6, "What year was that song made?")]
+    # data = [(141, "Hello, my name is Erik."), (58, "What is that song called?"),
+    #            (117, "Tell me the name of that song."), (6, "What year was that song made?")]
+
+    data = pd.read_csv('data/medium_articles.csv')
+    print(data)
+    exit()
+
     ids = [id for id, _ in data]
     strings = [s for _, s in data]
     
