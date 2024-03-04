@@ -2,29 +2,28 @@ import torch
 import torch.nn.functional as F
 from tqdm import tqdm
 
-
-def similarity_scores(matrix0: torch.Tensor, matrix1: torch.Tensor = None):
+def similarity_scores(matrix0: torch.Tensor, matrix1: torch.Tensor = torch.empty(0)):
     """
     Compute cosine similarity between two sets of embeddings.
 
     Args:
         matrix0 (torch.Tensor): Tensor containing the first set of embeddings.
         matrix1 (torch.Tensor, optional): Tensor containing the second set of embeddings. If None, computes similarity within matrix0.
-    
+
     Returns:
         torch.Tensor: A tensor where each row corresponds to an embedding in matrix0,
                       and contains the cosine similarity metric with matrix1 if provided.
     """
-    if matrix1 is None:
+    if matrix1 == torch.empty(0):
         similarity_matrix = F.cosine_similarity(matrix0.unsqueeze(1), matrix0.unsqueeze(0), dim=2)
         return similarity_matrix
-    
+
     assert matrix0.size(-1) == matrix1.size(-1), f"Dimensions of embeddings1 ({matrix0.size(-1)}) and matrix1 ({matrix1.size(-1)}) do not match."
     similarity_matrix = F.cosine_similarity(matrix0.unsqueeze(1), matrix1.unsqueeze(0), dim=2)
     return similarity_matrix
 
 
-def batch_similarity_scores(matrix, batch_size=32):
+def batch_similarity_scores(matrix: torch.Tensor, batch_size: int = 32):
     similarity_matrix = torch.empty(0)
     for i in tqdm(range(0, len(matrix), batch_size), desc="Embedding Similarity"):
         batch_similarity_matrix = torch.empty(0)
@@ -33,7 +32,7 @@ def batch_similarity_scores(matrix, batch_size=32):
             batch1 = matrix[j:j+batch_size]
             batch_batch_similarity_matrix = similarity_scores(batch0, batch1) # haha
             batch_similarity_matrix = torch.cat((batch_similarity_matrix, batch_batch_similarity_matrix), dim=1)
-    
+
         similarity_matrix = torch.cat((similarity_matrix, batch_similarity_matrix))
 
     return similarity_matrix

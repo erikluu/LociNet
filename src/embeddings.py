@@ -12,7 +12,7 @@ def initialize_embedding_model(model_id: str):
     return tokenizer, model
 
 
-def mean_pooling(model_output: tuple, attention_mask: torch.Tensor) -> torch.Tensor:
+def mean_pooling(model_output, attention_mask: torch.Tensor) -> torch.Tensor:
     """
     This function takes the model output and attention mask as input and performs mean pooling on the token embeddings.
     Args:
@@ -69,7 +69,7 @@ def batch_embeddings(input: list[str], tokenizer: AutoTokenizer, model: AutoMode
         embeddings.append(batch_embeddings)
         if save_path:
             torch.save(torch.cat(embeddings, dim=0), save_path)
-    
+
     embeddings = torch.cat(embeddings, dim=0)
 
     return embeddings
@@ -81,7 +81,7 @@ if __name__ == "__main__":
 
     strings = ["Hello, my name is Erik.", "What is that song called?",
                "Tell me the name of that song.", "What year was that song made?"]
-    
+
     embeddings = batch_embeddings(strings, tokenizer, model)
     print(embeddings.size())
     print(embeddings)
