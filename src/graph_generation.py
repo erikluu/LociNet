@@ -44,6 +44,7 @@ def small_world_graph():
 
 
 if __name__ == "__main__":
+    import torch
     import pandas as pd
     import networkx as nx
     import matplotlib.pyplot as plt
@@ -51,14 +52,16 @@ if __name__ == "__main__":
     import similarity as sim
     import pipeline as pipe
 
-    data = pd.read_csv('playgrounds/data_medium_1k_tags_5k_obs.csv')
+    data = pd.read_csv("../playgrounds/data_medium_1k_tags_5k_obs.csv")
     data = data.iloc[:100]
     ids = data.index.tolist()
-    embeddings = torch.Tensor([eval(e) for e in data["embeddings"].tolist()])
+
+    embeddings = torch.load("../data/embeddings_1k_tags_5k_obs.pt")
+    embeddings = embeddings[:100]
 
     pipeline = pipe.compose_pipeline(
         sim.batch_similarity_scores,
-        lambda data: knn_graph(data, ids, k=5)
+        lambda sim_mat: knn_graph(sim_mat, ids, k=5)
     )
 
     G = pipeline(embeddings)

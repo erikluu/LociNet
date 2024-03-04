@@ -14,7 +14,7 @@ def similarity_scores(matrix0: torch.Tensor, matrix1: torch.Tensor = torch.empty
         torch.Tensor: A tensor where each row corresponds to an embedding in matrix0,
                       and contains the cosine similarity metric with matrix1 if provided.
     """
-    if matrix1 == torch.empty(0):
+    if matrix1.size() == torch.empty(0).size():
         similarity_matrix = F.cosine_similarity(matrix0.unsqueeze(1), matrix0.unsqueeze(0), dim=2)
         return similarity_matrix
 

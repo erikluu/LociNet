@@ -46,7 +46,7 @@ def get_embeddings(input: list[str], tokenizer: AutoTokenizer, model: AutoModel)
     return sentence_embeddings
 
 
-def batch_embeddings(input: list[str], tokenizer: AutoTokenizer, model: AutoModel, batch_size: int = 32, save_path: str = None) -> torch.Tensor:
+def batch_embeddings(input: list[str], tokenizer: AutoTokenizer, model: AutoModel, batch_size: int = 32, save_path: str = "") -> torch.Tensor:
     """
     This function takes a list of strings and a batch size as input, and returns the embeddings of the strings.
     The embeddings are calculated in batches to optimize memory usage.
