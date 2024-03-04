@@ -35,8 +35,13 @@ def knn_graph(sim_mat: torch.Tensor, document_ids, k=10):
 
     return G
 
+
 def small_world_graph():
+    """
+    https://chih-ling-hsu.github.io/2020/05/15/watts-strogatz
+    """
     pass
+
 
 if __name__ == "__main__":
     import pandas as pd

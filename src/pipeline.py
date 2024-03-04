@@ -2,17 +2,14 @@ import embeddings as embed
 import similarity as sim
 import graph_generation as gg
 
-def compose(*functions):
+
+def compose_pipeline(*functions):
     def composed_function(data):
         result = data
         for function in functions:
             result = function(result)
         return result
     return composed_function
-
-
-def make_pipeline(*functions):
-    return compose(*functions)
 
 
 if __name__ == "__main__":
@@ -24,17 +21,17 @@ if __name__ == "__main__":
 
     ids = [id for id, _ in data]
     strings = [s for _, s in data]
-    
+
     model_id = 'sentence-transformers/all-mpnet-base-v2'
     # model_id = 'sentence-transformers/all-MiniLM-L6-v2'
     tokenizer, model = embed.initialize_embedding_model(model_id)
 
-    pipeline = make_pipeline(
+    pipeline = compose_pipeline(
                      lambda data: embed.batch_embeddings(data, tokenizer, model),
                      sim.batch_similarity_scores,
                      lambda data: gg.knn_graph(data, ids)
                     )
-    
+
     G = pipeline(strings)
 
     pos = nx.circular_layout(G)  # Define the layout for the nodes
@@ -44,8 +41,5 @@ if __name__ == "__main__":
 
     # Display the graph
     plt.show()
-    
+
     print(f"Output:\n{G}")
-    
-
-
