@@ -14,15 +14,15 @@ The method of loci is a strategy for memory enhancement, which uses visualizatio
 
 `src/embeddings.py` Gets embeddings from corpus using designated model.
 
-`src/similarity.py` Gets similarity between embeddings.
+`src/evaluation.py` Evaluation metrics to judge resulting graph in different qualities.
 
 `src/graph_generation.py` Generates graph from embedding similarities and clustering information.
+
+`src/similarity.py` Gets similarity between embeddings.
 
 `src/pipeline.py` Compose the modules into a pipeline.
 
 `src/utils.py` General utilities.
-
-`src/evaluation.py` Evaluation metrics to judge resulting graph in different qualities.
 
 # Thoughts
 
