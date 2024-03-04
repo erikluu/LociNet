@@ -4,19 +4,19 @@ import networkx as nx
 from utils import sort_matrix_values
 
 
-def knn_graph(matrix: torch.Tensor, document_ids, k=10):
+def knn_graph(sim_mat: torch.Tensor, document_ids, k=10):
     """
-    Create a k-nearest neighbors graph based on the input matrix.
+    Create a k-nearest neighbors graph based on the given similaity matrix
 
     Args:
-        matrix (torch.Tensor): Input matrix containing the data points.
+        sim_mat (torch.Tensor): Input matrix the similarity scores between each document.
         document_ids: IDs of the documents corresponding to the data points.
         k (int): Number of nearest neighbors to consider. Default is 10.
     
     Returns:
         nx.Graph: A networkx graph representing the k-nearest neighbors graph.
     """
-    indices, values = sort_matrix_values(matrix, k)
+    indices, values = sort_matrix_values(sim_mat, k)
     indices = indices[:, 1:]
     weights = values[:, 1:]
     print(indices)
@@ -35,6 +35,37 @@ def knn_graph(matrix: torch.Tensor, document_ids, k=10):
 
     return G
 
+def small_world_graph():
+    pass
+
+if __name__ == "__main__":
+    import pandas as pd
+    import networkx as nx
+    import matplotlib.pyplot as plt
+
+    import similarity as sim
+    import pipeline as pipe
+
+    data = pd.read_csv('playgrounds/data_medium_1k_tags_5k_obs.csv')
+    data = data.iloc[:100]
+    ids = data.index.tolist()
+    embeddings = torch.Tensor([eval(e) for e in data["embeddings"].tolist()])
+
+    pipeline = pipe.make_pipeline(
+        sim.batch_similarity_scores,
+        lambda data: knn_graph(data, ids, k=5)
+    )
+
+    G = pipeline(embeddings)
+
+    pos = nx.circular_layout(G)
+    nx.draw(G, pos, with_labels=True, node_size=700, font_size=10)
+    # edge_labels = nx.get_edge_attributes(G, 'weight')
+    # nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels)
+
+    plt.show()
+    
+    print(f"Output:\n{G}")
 
 
             

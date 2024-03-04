@@ -3,6 +3,9 @@ data/anthonys-second-brain
 data/medium_articles.csv
 data/medium_1000.csv
 data/notebook
+playgrounds/data_medium_1k_tags_5k_obs.csv
+playgrounds/embeddings_medium_1k_titles.pt
+playgrounds/embeddings_medium_1k_title_text.pt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
