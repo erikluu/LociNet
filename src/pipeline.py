@@ -1,7 +1,7 @@
 import embeddings as embed
 import similarity as sim
 import graph_generation as gg
-
+import utils
 
 def compose_pipeline(*functions):
     def composed_function(data):
@@ -26,20 +26,13 @@ if __name__ == "__main__":
     # model_id = 'sentence-transformers/all-MiniLM-L6-v2'
     tokenizer, model = embed.initialize_embedding_model(model_id)
 
+    embeddings = embed.batch_embeddings(strings, tokenizer, model)
+    pca_encodings = utils.pca(embeddings, n_components=2)
+
     pipeline = compose_pipeline(
-                     lambda data: embed.batch_embeddings(data, tokenizer, model),
                      sim.batch_similarity_scores,
-                     lambda data: gg.knn_graph(data, ids)
+                     lambda data: gg.knn_graph(data, ids, positions=pca_encodings)
                     )
 
-    G = pipeline(strings)
-
-    pos = nx.circular_layout(G)  # Define the layout for the nodes
-    nx.draw(G, pos, with_labels=True, node_size=700, font_size=10)  # Draw the nodes with labels
-    edge_labels = nx.get_edge_attributes(G, 'weight')  # Get edge weights
-    nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels)  # Draw edge labels
-
-    # Display the graph
-    plt.show()
-
+    G = pipeline(embeddings)
     print(f"Output:\n{G}")

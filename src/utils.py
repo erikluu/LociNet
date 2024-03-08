@@ -1,5 +1,14 @@
 import torch
 import psutil
+import networkx as nx
+from pyvis.network import Network
+from sklearn.decomposition import PCA
+
+
+def pca(matrix: torch.Tensor, n_components: int = 2) -> list[tuple]:
+    pca = PCA(n_components=n_components)
+    pca.fit(matrix)
+    return pca.transform(matrix)
 
 
 def argsort(matrix: torch.Tensor, k: int = 0) -> torch.Tensor:

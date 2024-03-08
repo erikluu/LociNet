@@ -2,9 +2,10 @@ import torch
 import torch.nn.functional as F
 from tqdm import tqdm
 from transformers import AutoTokenizer, AutoModel
+from typing import Any
 
 
-def initialize_embedding_model(model_id: str):
+def initialize_embedding_model(model_id: str) -> tuple[type[Any], type[Any]]:
     if not AutoTokenizer.from_pretrained(model_id, use_fast=True).is_fast: # is cached check
         print("Initalizing Tokenizer and Model")
     tokenizer = AutoTokenizer.from_pretrained(model_id, use_fast=True)
@@ -26,7 +27,7 @@ def mean_pooling(model_output, attention_mask: torch.Tensor) -> torch.Tensor:
     return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
 
 
-def get_embeddings(input: list[str], tokenizer: AutoTokenizer, model: AutoModel) -> torch.Tensor:
+def get_embeddings(input: list[str], tokenizer: type[Any], model: type[AutoModel]) -> torch.Tensor:
     """
     This function takes an input string and returns the embedding of the input using the initialized model.
     If the model is not initialized, it will be initialized before generating the embedding.
@@ -46,7 +47,7 @@ def get_embeddings(input: list[str], tokenizer: AutoTokenizer, model: AutoModel)
     return sentence_embeddings
 
 
-def batch_embeddings(input: list[str], tokenizer: AutoTokenizer, model: AutoModel, batch_size: int = 32, save_path: str = "") -> torch.Tensor:
+def batch_embeddings(input: list[str], tokenizer: type[AutoTokenizer], model: type[AutoModel], batch_size: int = 32, save_path: str = "") -> torch.Tensor:
     """
     This function takes a list of strings and a batch size as input, and returns the embeddings of the strings.
     The embeddings are calculated in batches to optimize memory usage.
