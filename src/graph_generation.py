@@ -21,27 +21,40 @@ def graph_to_json(G, save_path: str = "graph_data.json"):
         json.dump(graph_data, json_file)
 
 
-def knn_graph(sim_mat: torch.Tensor, document_ids: list[int], encodings: list[tuple], titles: list[str] = [], k: int = 10):
+def insert_nodes(G: nx.Graph, document_ids: list[int], attributes: dict):
+    pass
+    # nodes = []
+    # for id, attr in zip(document_ids, attributes):
+    #     node = [id]
+
+    #     for k, v in attr.items():
+    #         node.append({k: v})
+
+
+    # print(nodes)
+
+
+def knn_graph(sim_mat: torch.Tensor, document_ids: list[int], k: int = 10, **kwargs):
     """
     Create a k-nearest neighbors graph based on the given similaity matrix
 
     Args:
         sim_mat (torch.Tensor): Input matrix the similarity scores between each document.
-        document_ids: IDs of the documents corresponding to the data points.
         k (int): Number of nearest neighbors to consider. Default is 10.
-
+        **kwargs: Additional attributes to be passed to the graph nodes.
     Returns:
         nx.Graph: A networkx graph representing the k-nearest neighbors graph.
     """
-    assert all(len(t) >= 5 for t in encodings), "Encodings must be at least 5 dimensions"
-
-    indices, values = sort_matrix_values(sim_mat, k)
+    indices, values = sort_matrix_values(sim_mat, k+1) # not including itself
     indices = indices[:, 1:]
     weights = values[:, 1:]
 
     G = nx.Graph()
-    for i, encoding, title in zip(document_ids, encodings, titles):
-        G.add_node(i, pos=encoding[:2], color=normalize_and_convert_to_hex(encoding[2:5]), title=title)
+    G = insert_nodes(G, document_ids, kwargs)
+    print(G)
+    exit()
+    # for i, encoding, title in zip(document_ids, encodings, titles):
+    #     G.add_node(i, pos=encoding[:2], color=normalize_and_convert_to_hex(encoding[2:5]), title=title)
 
     edges = []
     for i in range(len(indices)):
@@ -63,7 +76,11 @@ def small_world_graph():
 
 if __name__ == "__main__":
     sim_mat = torch.randn(10, 10)
+
     ids = list(range(10))
     positions = [(0, 0), (1, 1), (2, 2), (3, 3), (4, 4), (5, 5), (6, 6), (7, 7), (8, 8), (9, 9)]
-    G = knn_graph(sim_mat, ids, positions, k=3)
+    colors = ["black", "red", "blue", "green", "yellow", "orange", "purple", "pink", "brown", "grey"]
+    titles = ["title"] * 10
+
+    G = knn_graph(sim_mat, k=3, document_ids=ids, positions=positions, colors=colors, titles=titles)
     graph_to_json(G)
