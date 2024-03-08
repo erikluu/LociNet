@@ -117,7 +117,7 @@
                     .append("circle")
                     .attr("class", "node")
                     .attr("r", 5)
-                    .attr("fill", nodesData.color)
+                    .style("fill", (d) => d.color)
                     .call(
                         d3
                             .drag() // Enable dragging behavior
