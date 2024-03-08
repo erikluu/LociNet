@@ -25,6 +25,7 @@ if __name__ == "__main__":
     data = pd.read_csv("data/medium_1k_tags_5k_obs.csv")
     data = data.iloc[:100]
     ids = data.index.tolist()
+    titles = data["title"].tolist()
 
     embeddings = torch.load("data/embeddings_1k_tags_5k_obs.pt")
     embeddings = embeddings[:100]
@@ -37,8 +38,8 @@ if __name__ == "__main__":
 
     pipeline = compose_pipeline(
                      batch_similarity_scores,
-                     lambda data: knn_graph(data, ids, encodings=pca_encodings)
+                     lambda data: knn_graph(data, ids, encodings=pca_encodings, titles=titles, k=3)
                     )
 
     G = pipeline(embeddings)
-    graph_to_json(G)
+    graph_to_json(G, "visualization/graph_data_k3.json")

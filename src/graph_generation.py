@@ -4,7 +4,7 @@ import networkx as nx
 
 from utils import sort_matrix_values, normalize_and_convert_to_hex
 
-def graph_to_json(G):
+def graph_to_json(G, save_path: str = "graph_data.json"):
     graph_data = {
         "nodes": [],
         "links": []
@@ -12,16 +12,16 @@ def graph_to_json(G):
 
     for node, data in G.nodes(data=True):
         print(node, data)
-        graph_data["nodes"].append({"id": node, "pos": data["pos"]})
+        graph_data["nodes"].append({"id": node, "pos": data["pos"], "color": data["color"], "title": data["title"]})
 
     for source, target, data in G.edges(data=True):
         graph_data["links"].append({"source": source, "target": target, "weight": data["weight"]})
 
-    with open('graph_data.json', 'w') as json_file:
+    with open(save_path, 'w') as json_file:
         json.dump(graph_data, json_file)
 
 
-def knn_graph(sim_mat: torch.Tensor, document_ids: list[int], encodings: list[tuple], k: int = 10):
+def knn_graph(sim_mat: torch.Tensor, document_ids: list[int], encodings: list[tuple], titles: list[str] = [], k: int = 10):
     """
     Create a k-nearest neighbors graph based on the given similaity matrix
 
@@ -40,8 +40,8 @@ def knn_graph(sim_mat: torch.Tensor, document_ids: list[int], encodings: list[tu
     weights = values[:, 1:]
 
     G = nx.Graph()
-    for i, encoding in zip(document_ids, encodings):
-        G.add_node(i, pos=encoding[:2], color=normalize_and_convert_to_hex(encoding[2:5]))
+    for i, encoding, title in zip(document_ids, encodings, titles):
+        G.add_node(i, pos=encoding[:2], color=normalize_and_convert_to_hex(encoding[2:5]), title=title)
 
     edges = []
     for i in range(len(indices)):
