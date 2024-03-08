@@ -1,8 +1,3 @@
-import embeddings as embed
-import similarity as sim
-import graph_generation as gg
-import utils
-
 def compose_pipeline(*functions):
     def composed_function(data):
         result = data
@@ -13,26 +8,37 @@ def compose_pipeline(*functions):
 
 
 if __name__ == "__main__":
-    import networkx as nx
-    import matplotlib.pyplot as plt
+    from utils import pca
+    from embeddings import initialize_embedding_model
+    from similarity import batch_similarity_scores
+    from graph_generation import knn_graph, graph_to_json
 
-    data = [(141, "Hello, my name is Erik."), (58, "What is that song called?"),
-               (117, "Tell me the name of that song."), (6, "What year was that song made?")]
+    import torch
+    import pandas as pd
 
-    ids = [id for id, _ in data]
-    strings = [s for _, s in data]
+    # data = [(141, "Hello, my name is Erik."), (58, "What is that song called?"),
+    #            (117, "Tell me the name of that song."), (6, "What year was that song made?")]
 
-    model_id = 'sentence-transformers/all-mpnet-base-v2'
-    # model_id = 'sentence-transformers/all-MiniLM-L6-v2'
-    tokenizer, model = embed.initialize_embedding_model(model_id)
+    # ids = [id for id, _ in data]
+    # strings = [s for _, s in data]
 
-    embeddings = embed.batch_embeddings(strings, tokenizer, model)
-    pca_encodings = utils.pca(embeddings, n_components=5)
+    data = pd.read_csv("data/medium_1k_tags_5k_obs.csv")
+    data = data.iloc[:100]
+    ids = data.index.tolist()
+
+    embeddings = torch.load("data/embeddings_1k_tags_5k_obs.pt")
+    embeddings = embeddings[:100]
+
+    pca_encodings = [tuple(encoding) for encoding in pca(embeddings, n_components=5)]
+
+    # model_id = 'sentence-transformers/all-mpnet-base-v2'
+    model_id = 'sentence-transformers/all-MiniLM-L6-v2'
+    tokenizer, model = initialize_embedding_model(model_id)
 
     pipeline = compose_pipeline(
-                     sim.batch_similarity_scores,
-                     lambda data: gg.knn_graph(data, ids, encodings=pca_encodings)
+                     batch_similarity_scores,
+                     lambda data: knn_graph(data, ids, encodings=pca_encodings)
                     )
 
     G = pipeline(embeddings)
-    print(f"Output:\n{G}")
+    graph_to_json(G)
