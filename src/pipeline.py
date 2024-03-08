@@ -27,11 +27,11 @@ if __name__ == "__main__":
     tokenizer, model = embed.initialize_embedding_model(model_id)
 
     embeddings = embed.batch_embeddings(strings, tokenizer, model)
-    pca_encodings = utils.pca(embeddings, n_components=2)
+    pca_encodings = utils.pca(embeddings, n_components=5)
 
     pipeline = compose_pipeline(
                      sim.batch_similarity_scores,
-                     lambda data: gg.knn_graph(data, ids, positions=pca_encodings)
+                     lambda data: gg.knn_graph(data, ids, encodings=pca_encodings)
                     )
 
     G = pipeline(embeddings)

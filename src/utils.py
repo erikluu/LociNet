@@ -1,8 +1,14 @@
 import torch
 import psutil
+import numpy as np
 import networkx as nx
 from pyvis.network import Network
 from sklearn.decomposition import PCA
+
+def normalize_and_convert_to_hex(rgb):
+    normalized_rgb = [int(value * 255) for value in rgb]
+    hex_color = '#{:02x}{:02x}{:02x}'.format(*normalized_rgb)
+    return hex_color
 
 
 def pca(matrix: torch.Tensor, n_components: int = 2) -> list[tuple]:
