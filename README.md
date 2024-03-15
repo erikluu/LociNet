@@ -55,3 +55,6 @@ Metrics and Analysis
 - Average distance between all nodes
 - Average distance between tags
 - How long to get from X to Y
+
+Some words that may or may not be used later for my thesis 🤷‍♂️🤷‍♂️:
+We are trying to mimic, why not make something new. The greatest works aren’t people trying to recreate something they’ve read about. The creators of those things didn’t go about it that way. They didn’t have the hindsight.

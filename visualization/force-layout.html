@@ -1,5 +1,4 @@
-// plans: // embed textual data, have a command-f to find based on title or text
-or fuzzy search w/ embeddings // add a search bar to find nodes
+<!-- plans: embed textual data, have a command-f to find based on title or text or fuzzy search w/ embeddings add a search bar to find nodes -->
 
 <!doctype html>
 <html lang="en">
@@ -48,7 +47,7 @@ or fuzzy search w/ embeddings // add a search bar to find nodes
                 const offsetX = width / 2;
                 const offsetY = height / 2;
 
-                const scaler = 500;
+                const scaler = 600;
 
                 nodesData.forEach((node) => {
                     node.pos[0] = node.pos[0] * scaler + offsetX;
@@ -115,7 +114,7 @@ or fuzzy search w/ embeddings // add a search bar to find nodes
                     .enter()
                     .append("circle")
                     .attr("class", "node")
-                    .attr("r", 5)
+                    .attr("r", 10)
                     .attr("fill", (d) => d.color)
                     .call(
                         d3

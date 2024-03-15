@@ -1,7 +1,7 @@
 import torch
 import torch.nn.functional as F
-from tqdm import tqdm
 from transformers import AutoTokenizer, AutoModel
+from tqdm import tqdm
 from typing import Any
 
 

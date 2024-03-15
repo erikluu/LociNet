@@ -21,17 +21,23 @@ def graph_to_json(G, save_path: str = "graph_data.json"):
         json.dump(graph_data, json_file)
 
 
-def insert_nodes(G: nx.Graph, document_ids: list[int], attributes: dict):
-    pass
-    # nodes = []
-    # for id, attr in zip(document_ids, attributes):
-    #     node = [id]
+def insert_nodes(G, document_ids: list[int], attributes: dict):
+    """
+    Insert nodes into the graph with the given attributes.
 
-    #     for k, v in attr.items():
-    #         node.append({k: v})
+    Args:
+        G (nx.Graph): The graph to insert the nodes into.
+        document_ids (list[int]): List of document ids.
+        attributes (dict): Dictionary of attributes to be added to the nodes.
+    Returns:
+        None
+    """
+    nodes = []
+    for i, id in enumerate(document_ids):
+        attr = {k: v[i] for k, v in attributes.items()}
+        nodes.append((i, attr))
 
-
-    # print(nodes)
+    G.add_nodes_from(nodes)
 
 
 def knn_graph(sim_mat: torch.Tensor, document_ids: list[int], k: int = 10, **kwargs):
@@ -45,26 +51,67 @@ def knn_graph(sim_mat: torch.Tensor, document_ids: list[int], k: int = 10, **kwa
     Returns:
         nx.Graph: A networkx graph representing the k-nearest neighbors graph.
     """
+    G = nx.Graph()
+    insert_nodes(G, document_ids, kwargs)
+
     indices, values = sort_matrix_values(sim_mat, k+1) # not including itself
     indices = indices[:, 1:]
     weights = values[:, 1:]
 
-    G = nx.Graph()
-    G = insert_nodes(G, document_ids, kwargs)
-    print(G)
-    exit()
-    # for i, encoding, title in zip(document_ids, encodings, titles):
-    #     G.add_node(i, pos=encoding[:2], color=normalize_and_convert_to_hex(encoding[2:5]), title=title)
-
     edges = []
     for i in range(len(indices)):
         node0 = document_ids[i]
-        for j, w in zip(indices[i], weights[i]):
+        for j, weight in zip(indices[i], weights[i]):
             node1 = document_ids[j]
-            edges.append((node0, node1, w.item()))
+            edges.append((node0, node1, weight.item()))
 
     G.add_weighted_edges_from(edges)
     return G
+
+
+def mst_graph(sim_mat: torch.Tensor, document_ids: list[int], **kwargs):
+    """
+    Create a minimum spanning tree graph based on the given similarity matrix.
+
+    Args:
+        sim_mat (torch.Tensor): Input matrix the similarity scores between each document.
+        **kwargs: Additional attributes to be passed to the graph nodes.
+    Returns:
+        nx.Graph: A networkx graph representing the minimum spanning tree graph.
+    """
+    G = nx.Graph()
+    insert_nodes(G, document_ids, kwargs)
+
+    indices, values = sort_matrix_values(sim_mat, len(document_ids)-1)
+    edges = []
+    for i in range(len(indices)):
+        node0 = document_ids[i]
+        for j, weight in zip(indices[i], values[i]):
+            node1 = document_ids[j]
+            edges.append((node0, node1, weight.item()))
+
+    G.add_weighted_edges_from(edges)
+    return nx.minimum_spanning_tree(G)
+
+
+def dbscan_graph(clusters: torch.Tensor, document_ids: list[int], **kwargs):
+    """
+    Create a graph based on the DBSCAN clustering algorithm.
+
+    Args:
+        sim_mat (torch.Tensor): Input matrix the similarity scores between each document.
+        eps (float): The maximum distance between two samples for one to be considered as in the neighborhood of the other.
+        min_samples (int): The number of samples in a neighborhood for a point to be considered as a core point.
+        **kwargs: Additional attributes to be passed to the graph nodes.
+    Returns:
+        nx.Graph: A networkx graph representing the DBSCAN clustering graph.
+    """
+    G = nx.Graph()
+    insert_nodes(G, document_ids, kwargs)
+
+    X = sim_mat.numpy()
+
+
 
 
 def small_world_graph():
