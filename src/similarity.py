@@ -4,10 +4,7 @@ from tqdm import tqdm
 
 def compute_feature_similarity(features):
     features = features.t()  # Transpose the feature matrix to get features as rows
-    norm_features = F.normalize(features, p=2, dim=1)  # Normalize the feature vectors
-    feature_similarity = torch.mm(norm_features, norm_features.t())  # Compute the cosine similarity matrix
-    print(feature_similarity)
-    return feature_similarity
+    return F.cosine_similarity(features.unsqueeze(1), features.unsqueeze(0), dim=2)
 
 
 def soft_cosine_similarity(batch0, batch1, feature_similarity):
@@ -22,14 +19,9 @@ def soft_cosine_similarity(batch0, batch1, feature_similarity):
     for i in range(batch0.size(0)):
         for j in range(batch1.size(0)):
             # Compute the weighted inner product
-            sim = torch.matmul(norm_batch0[i], torch.matmul(feature_similarity, norm_batch1[j]))
-            soft_cos_sim[i, j] = sim
-            # Debugging: Print intermediate similarity value
-            # print(f"Soft Cosine Similarity [i={i}, j={j}]: {sim.item()}")
-
-    # min_sim = torch.min(soft_cos_sim)
-    # max_sim = torch.max(soft_cos_sim)
-    # soft_cos_sim = 2 * (soft_cos_sim - min_sim) / (max_sim - min_sim) - 1
+            numerator = torch.matmul(torch.matmul(norm_batch0[i], feature_similarity), norm_batch1[j])
+            denominator = torch.sqrt(torch.matmul(torch.matmul(norm_batch0[i], feature_similarity), norm_batch0[i])) * torch.sqrt(torch.matmul(torch.matmul(norm_batch1[j], feature_similarity), norm_batch1[j]))
+            soft_cos_sim[i, j] = numerator / denominator
     
     return soft_cos_sim
 
@@ -49,7 +41,8 @@ def similarity_scores(batch0, batch1, metric, feature_similarity=None, sigma=1.0
         raise ValueError(f"Unknown metric: {metric}")
 
 
-def batch_similarity_scores(matrix, metric="cosine", feature_similarity=None, batch_size=256, sigma=1.0):
+def batch_similarity_scores(matrix, metric="cosine", batch_size=256, sigma=1.0):
+    feature_similarity = compute_feature_similarity(matrix)
     n = matrix.size(0)
     similarity_matrix = None
 
@@ -79,9 +72,9 @@ def batch_similarity_scores(matrix, metric="cosine", feature_similarity=None, ba
     return similarity_matrix
 
 
-def get_all_similarities(embeddings, feature_similarity, sigma=1.0):
+def get_all_similarities(embeddings, sigma=1.0):
     cosine_similarity = batch_similarity_scores(embeddings, metric="cosine")
-    soft_cosine_similarity = batch_similarity_scores(embeddings, metric="soft_cosine", feature_similarity=feature_similarity)
+    soft_cosine_similarity = batch_similarity_scores(embeddings, metric="soft_cosine")
     euclidean_similarity = batch_similarity_scores(embeddings, metric="euclidean", sigma=sigma)
 
     return cosine_similarity, soft_cosine_similarity, euclidean_similarity
@@ -93,7 +86,7 @@ feature_similarity = compute_feature_similarity(document_embeddings)
 batch0 = document_embeddings[:10]  # First 10 samples
 batch1 = document_embeddings[10:20]  # Next 10 samples
 
-cosine_sim, soft_cos_sim, euclidean_sim = get_all_similarities(document_embeddings, feature_similarity)
+cosine_sim, soft_cos_sim, euclidean_sim = get_all_similarities(document_embeddings)
 print("Cosine Similarity:\n", cosine_sim)
 print("Soft Cosine Similarity:\n", soft_cos_sim)
 print("Euclidean Similarity:\n", euclidean_sim)
