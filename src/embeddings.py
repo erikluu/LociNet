@@ -177,7 +177,7 @@ def get_model_and_pooling_func(model_name: str) -> Tuple[Any, Any, int]:
         tokenizer, model, max_length = initialize_llama_model()
     elif model_name == "word2vec":
         model = initialize_word2vec_model()
-        return None, model, None  # Word2Vec doesn't use tokenizer and max_length
+        return None, model, None  # pyright: ignore Word2Vec doesn't use tokenizer and max_length
     else:
         raise ValueError(f"Model name {model_name} is not supported.")
     
