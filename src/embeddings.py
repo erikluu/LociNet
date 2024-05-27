@@ -144,6 +144,7 @@ def aggregate_embeddings(embeddings: List[torch.Tensor]) -> torch.Tensor:
 
 def document_to_vector(model, doc):
     """Convert a document into a vector by averaging its word vectors."""
+    doc = doc.split()
     word_vectors = [model[word] for word in doc if word in model]
     if not word_vectors:  # Handle the case where none of the words are in the model
         return np.zeros(model.vector_size)
@@ -256,31 +257,82 @@ def process_embeddings(input: List[Any], model_name: str, pooling_strategy: str,
 
 
 if __name__ == "__main__":
-    strings = ["Hello, my name is Erik.", "What is that song called?", "Tell me the name of that song.", "What year was that song made?"]
-    tokenized_strings = [string.lower().split() for string in strings]
+    # strings = ["Hello, my name is Erik.", "What is that song called?", "Tell me the name of that song.", "What year was that song made?"]
+    # tokenized_strings = [string.lower().split() for string in strings]
 
-    # Process embeddings with different pooling strategies
-    nomic_embeddings = process_embeddings(strings, "nomic", "mean_pooling")
-    print("Nomic Model with Mean Pooling Embeddings:")
-    print(nomic_embeddings.size())
-    print(nomic_embeddings)
+    # # Process embeddings with different pooling strategies
+    # nomic_embeddings = process_embeddings(strings, "nomic", "mean_pooling")
+    # print("Nomic Model with Mean Pooling Embeddings:")
+    # print(nomic_embeddings.size())
+    # print(nomic_embeddings)
 
-    st_embeddings = process_embeddings(strings, "minilm", "self_attention")
-    print("Sentence Transformer (MiniLM) with Self-Attention Embeddings:")
-    print(st_embeddings.size())
-    print(st_embeddings)
+    # st_embeddings = process_embeddings(strings, "minilm", "self_attention")
+    # print("Sentence Transformer (MiniLM) with Self-Attention Embeddings:")
+    # print(st_embeddings.size())
+    # print(st_embeddings)
 
-    bert_embeddings = process_embeddings(strings, "bert", "global_attention")
-    print("Google BERT Model with Global Attention Embeddings:")
-    print(bert_embeddings.size())
-    print(bert_embeddings)
+    # bert_embeddings = process_embeddings(strings, "bert", "global_attention")
+    # print("Google BERT Model with Global Attention Embeddings:")
+    # print(bert_embeddings.size())
+    # print(bert_embeddings)
 
-    specter_embeddings = process_embeddings(strings, "specter", "content_based_attention")
-    print("AllenAI Specter Model with Content-Based Attention Embeddings:")
-    print(specter_embeddings.size())
-    print(specter_embeddings)
+    # specter_embeddings = process_embeddings(strings, "specter", "content_based_attention")
+    # print("AllenAI Specter Model with Content-Based Attention Embeddings:")
+    # print(specter_embeddings.size())
+    # print(specter_embeddings)
 
-    word2vec_embeddings = process_embeddings(tokenized_strings, "word2vec", "mean_pooling")
-    print("Word2Vec Model Embeddings:")
-    print(word2vec_embeddings.size())
-    print(word2vec_embeddings)
+    # word2vec_embeddings = process_embeddings(tokenized_strings, "word2vec", "mean_pooling")
+    # print("Word2Vec Model Embeddings:")
+    # print(word2vec_embeddings.size())
+    # print(word2vec_embeddings)
+
+    import ast
+    import pickle
+    import pandas as pd
+
+    def save_to_pickle(object, filename: str):
+        assert filename[-7:] == ".pickle", "Filename must end with .pickle extension."
+        pickle.dump(object, open(filename, 'wb'))
+
+    def load_data(filepath, n=None):
+        assert filepath[-4:] == ".csv", "Must be a .csv file"
+        data = pd.read_csv(filepath)
+        if n:
+            data = data.head(n)
+
+        attrs = {
+            "titles": data["title"].tolist(),
+            "text": data["text"].tolist(),
+            "tags": data["tags"].apply(ast.literal_eval).tolist(),
+            "ids": data.index.tolist()
+        }
+
+        if "simplified_tags" in data.columns:
+            attrs["simplified_tags"] = data["simplified_tags"].apply(ast.literal_eval).tolist()
+
+        return attrs
+
+    def run(dataset_name: str, input_texts: List[str]):
+        # embedding_models = ["nomic", "minilm", "mpnet", "bert", "specter", "word2vec"]
+        embedding_models = ["word2vec", "nomic", "minilm", "mpnet", "bert", "specter"]
+        pooling_strategies = [
+            'mean_pooling', 'global_attention', 'content_based_attention'
+        ]
+        # pooling_strategies = [
+        #     'mean_pooling', 'sum_pooling', 'max_pooling', 'min_pooling',
+        #     'global_attention', 'content_based_attention'
+        # ]
+        # pooling_strategies = [
+        #     'mean_pooling', 'sum_pooling', 'max_pooling', 'min_pooling',
+        #     'self_attention', 'global_attention', 'content_based_attention', 'learned_self_attention'
+        # ]
+
+        for model_name in embedding_models:
+            for pooling_strategy in pooling_strategies:
+                print(f"Processing {model_name} with {pooling_strategy} pooling")
+                embeddings = process_embeddings(input_texts, model_name, pooling_strategy)
+
+                save_to_pickle(embeddings, f"embeddings/{dataset_name}_{model_name}_{pooling_strategy}_n10000.pickle")
+
+    data = load_data("data/medium_1k_tags_simplified.csv", n=10000)
+    run("medium1k", data["text"])

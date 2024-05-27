@@ -73,7 +73,7 @@ def save_graph_to_pickle(G, filename: str):
 
 def save_to_pickle(object, filename: str):
     assert filename[-7:] == ".pickle", "Filename must end with .pickle extension."
-    pickle.dump(G, open(filename, 'wb'))
+    pickle.dump(object, open(filename, 'wb'))
 
 
 def load_from_pickle(filename: str):
