@@ -59,14 +59,61 @@ def initialize_word2vec_model() -> Word2Vec:
     return model # pyright: ignore
 
 # -----------------
-# Mean Pooling Functions
+# Pooling Functions
 # -----------------
 
-def mean_pooling(model_output, attention_mask: torch.Tensor) -> torch.Tensor:
-    """Perform mean pooling on the token embeddings for sentence transformers."""
+def mean_pooling(model_output, attention_mask):
     token_embeddings = model_output.last_hidden_state
     input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
     return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
+
+def sum_pooling(model_output, attention_mask):
+    token_embeddings = model_output.last_hidden_state
+    input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
+    return torch.sum(token_embeddings * input_mask_expanded, 1)
+
+def max_pooling(model_output, attention_mask):
+    token_embeddings = model_output.last_hidden_state
+    input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
+    return torch.max(token_embeddings * input_mask_expanded, 1)[0]
+
+def min_pooling(model_output, attention_mask):
+    token_embeddings = model_output.last_hidden_state
+    input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
+    return torch.min(token_embeddings * input_mask_expanded, 1)[0]
+
+def self_attention(model_output, attention_mask):
+    token_embeddings = model_output.last_hidden_state
+    attention_scores = torch.matmul(token_embeddings, token_embeddings.transpose(-1, -2))
+    attention_weights = F.softmax(attention_scores, dim=-1)
+    aggregated_embedding = torch.matmul(attention_weights, token_embeddings)
+    return torch.mean(aggregated_embedding, dim=1)
+
+def global_attention(model_output, attention_mask):
+    token_embeddings = model_output.last_hidden_state
+    query_vector = torch.mean(token_embeddings, dim=1, keepdim=True)
+    attention_scores = torch.matmul(token_embeddings, query_vector.transpose(-1, -2))
+    attention_weights = F.softmax(attention_scores, dim=1)
+    aggregated_embedding = torch.matmul(attention_weights.transpose(-1, -2), token_embeddings)
+    return aggregated_embedding[:, 0, :]
+
+def content_based_attention(model_output, attention_mask):
+    token_embeddings = model_output.last_hidden_state
+    dot_products = torch.matmul(token_embeddings, token_embeddings.transpose(-1, -2))
+    norms = torch.linalg.norm(token_embeddings, dim=2, keepdims=True)
+    similarity_matrix = dot_products / (torch.matmul(norms, norms.transpose(-1, -2)) + 1e-10)
+    attention_weights = F.softmax(similarity_matrix, dim=-1)
+    aggregated_embedding = torch.matmul(attention_weights, token_embeddings)
+    return torch.mean(aggregated_embedding, dim=1)
+
+def learned_self_attention(model_output, attention_mask):
+    token_embeddings = model_output.last_hidden_state
+    query_vector = torch.randn(token_embeddings.shape[-1])
+    attention_scores = torch.matmul(token_embeddings, query_vector)
+    attention_weights = F.softmax(attention_scores, dim=1)
+    aggregated_embedding = torch.matmul(attention_weights.transpose(-1, -2), token_embeddings)
+    return aggregated_embedding[:, 0, :]
+
 
 # -----------------
 # Utility Functions
@@ -106,7 +153,7 @@ def document_to_vector(model, doc):
 # Embedding Functions
 # -----------------
 
-def get_embeddings(input: List[str], tokenizer: type[Any], model: type[AutoModel], max_length: int) -> torch.Tensor:
+def get_embeddings(input: List[str], tokenizer: Any, model: Any, max_length: int, pooling_function: Any) -> torch.Tensor:
     """Get embeddings for a list of documents."""
     document_embeddings = []
     for document in input:
@@ -116,11 +163,26 @@ def get_embeddings(input: List[str], tokenizer: type[Any], model: type[AutoModel
             encoded_input = tokenizer(chunk, padding=True, truncation=True, return_tensors='pt', max_length=max_length)
             with torch.no_grad():
                 model_output = model(**encoded_input)
-            chunk_embedding = mean_pooling(model_output, encoded_input['attention_mask']).squeeze()
+            chunk_embedding = pooling_function(model_output, encoded_input['attention_mask']).squeeze()
             chunk_embeddings.append(chunk_embedding)
         document_embedding = aggregate_embeddings(chunk_embeddings)
         document_embeddings.append(document_embedding)
     return torch.stack(document_embeddings)
+
+def batch_embeddings(input: List[str], tokenizer: Any, model: Any, pooling_function: Any, batch_size: int = 32, save_path: str = "", max_length: int = 512) -> torch.Tensor:
+    """Get embeddings for a list of documents in batches."""
+    embeddings = []
+    pbar = tqdm(range(0, len(input), batch_size))
+    for i in pbar:
+        batch = input[i: i + batch_size]
+        batch_embeddings = get_embeddings(batch, tokenizer, model, max_length, pooling_function)
+        pbar.set_description(f"Processing batch: {batch[0][:20]}...")
+        embeddings.append(batch_embeddings)
+        if save_path:
+            torch.save(torch.cat(embeddings, dim=0), save_path)
+    embeddings = torch.cat(embeddings, dim=0)
+    return embeddings
+
 
 def get_word2vec_embeddings(input: List[List[str]], model: Word2Vec) -> torch.Tensor:
     """Get Word2Vec embeddings for a list of documents."""
@@ -128,19 +190,6 @@ def get_word2vec_embeddings(input: List[List[str]], model: Word2Vec) -> torch.Te
     document_embeddings = np.array(document_embeddings)
     return torch.tensor(document_embeddings)
 
-def batch_embeddings(input: List[str], tokenizer: type[AutoTokenizer], model: type[AutoModel], batch_size: int = 32, save_path: str = "", max_length: int = 512) -> torch.Tensor:
-    """Get embeddings for a list of documents in batches."""
-    embeddings = []
-    pbar = tqdm(range(0, len(input), batch_size))
-    for i in pbar:
-        batch = input[i: i + batch_size]
-        batch_embeddings = get_embeddings(batch, tokenizer, model, max_length)
-        pbar.set_description(f"Processing batch: {batch[0][:20]}...")
-        embeddings.append(batch_embeddings)
-        if save_path:
-            torch.save(torch.cat(embeddings, dim=0), save_path)
-    embeddings = torch.cat(embeddings, dim=0)
-    return embeddings
 
 def batch_word2vec_embeddings(input: List[List[str]], model: Word2Vec, batch_size: int = 32, save_path: str = "") -> torch.Tensor:
     """Get Word2Vec embeddings for a list of documents in batches."""
@@ -184,45 +233,54 @@ def get_model_and_pooling_func(model_name: str) -> Tuple[Any, Any, int]:
     
     return tokenizer, model, max_length
 
-def process_embeddings(input: List[Any], model_name: str, batch_size: int = 32, save_path: str = "") -> torch.Tensor:
-    """Process embeddings based on the specified model name."""
+def process_embeddings(input: List[Any], model_name: str, pooling_strategy: str, batch_size: int = 32, save_path: str = "") -> torch.Tensor:
+    """Process embeddings based on the specified model name and pooling strategy."""
     tokenizer, model, max_length = get_model_and_pooling_func(model_name)
+    pooling_strategies = {
+        'mean_pooling': mean_pooling,
+        'sum_pooling': sum_pooling,
+        'max_pooling': max_pooling,
+        'min_pooling': min_pooling,
+        'self_attention': self_attention,
+        'global_attention': global_attention,
+        'content_based_attention': content_based_attention,
+        'learned_self_attention': learned_self_attention
+    }
+    pooling_function = pooling_strategies[pooling_strategy]
+
     if model_name == "word2vec":
         embeddings = batch_word2vec_embeddings(input, model, batch_size, save_path)
     else:
-        embeddings = batch_embeddings(input, tokenizer, model, batch_size, save_path, max_length)
+        embeddings = batch_embeddings(input, tokenizer, model, pooling_function, batch_size, save_path, max_length)
     return embeddings
+
 
 if __name__ == "__main__":
     strings = ["Hello, my name is Erik.", "What is that song called?", "Tell me the name of that song.", "What year was that song made?"]
     tokenized_strings = [string.lower().split() for string in strings]
-    
-    nomic_embeddings = process_embeddings(strings, "nomic")
-    print("Nomic Model Embeddings:")
+
+    # Process embeddings with different pooling strategies
+    nomic_embeddings = process_embeddings(strings, "nomic", "mean_pooling")
+    print("Nomic Model with Mean Pooling Embeddings:")
     print(nomic_embeddings.size())
     print(nomic_embeddings)
-    
-    st_embeddings = process_embeddings(strings,  "minilm")
-    print("Sentence Transformer (MiniLM) Embeddings:")
+
+    st_embeddings = process_embeddings(strings, "minilm", "self_attention")
+    print("Sentence Transformer (MiniLM) with Self-Attention Embeddings:")
     print(st_embeddings.size())
     print(st_embeddings)
 
-    st_embeddings = process_embeddings(strings,  "mpnet")
-    print("Sentence Transformer (MPNet) Embeddings:")
-    print(st_embeddings.size())
-    print(st_embeddings)
-
-    bert_embeddings = process_embeddings(strings, "bert")
-    print("Google BERT Model Embeddings:")
+    bert_embeddings = process_embeddings(strings, "bert", "global_attention")
+    print("Google BERT Model with Global Attention Embeddings:")
     print(bert_embeddings.size())
     print(bert_embeddings)
 
-    specter_embeddings = process_embeddings(strings, "specter")
-    print("AllenAI Specter Model Embeddings:")
+    specter_embeddings = process_embeddings(strings, "specter", "content_based_attention")
+    print("AllenAI Specter Model with Content-Based Attention Embeddings:")
     print(specter_embeddings.size())
     print(specter_embeddings)
 
-    word2vec_embeddings = process_embeddings(tokenized_strings, "word2vec")
+    word2vec_embeddings = process_embeddings(tokenized_strings, "word2vec", "mean_pooling")
     print("Word2Vec Model Embeddings:")
     print(word2vec_embeddings.size())
     print(word2vec_embeddings)

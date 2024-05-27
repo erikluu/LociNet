@@ -1,11 +1,20 @@
 import itertools
-import pandas as pd
+from collections import defaultdict, Counter, deque
+
 import numpy as np
-from collections import defaultdict, Counter
+import pandas as pd
+import networkx as nx
 from sklearn.metrics.cluster import homogeneity_score, completeness_score
+
+import src.similarity as sim
+import src.aggregation as agg
+import src.pipeline as pipe
 import src.utils as utils
 
-# ------------------------------------- Embeddings
+
+# --------------------------------------------------------
+# ---------------------- Embeddings ----------------------
+# --------------------------------------------------------
 
 def group_by_tags(tags):
     tags_to_rows = defaultdict(list)
@@ -24,7 +33,7 @@ def get_node_pairs(tag_dict: dict) -> set:
     return node_pairs
 
 
-def calculate_metrics(similarity_matrix: np.ndarray, tag_dict: dict, metric_name: str, embedding_model, data_source) -> pd.DataFrame:
+def calculate_metrics(similarity_matrix: np.ndarray, tag_dict: dict, metric_name: str, embedding_model, data_source, agg_method) -> pd.DataFrame:
     num_nodes = similarity_matrix.shape[0]
     shared_tag_pairs = get_node_pairs(tag_dict)
     upper_tri_indices = np.triu_indices(num_nodes, k=1)
@@ -38,6 +47,7 @@ def calculate_metrics(similarity_matrix: np.ndarray, tag_dict: dict, metric_name
     metrics = {
         'data_source': data_source,
         'embedding_model': embedding_model,
+        'agg_method': agg_method,
         'metric_name': metric_name,
         'metric': ['mean', 'median', 'std_dev'],
         'between_all_nodes': [
@@ -57,19 +67,34 @@ def calculate_metrics(similarity_matrix: np.ndarray, tag_dict: dict, metric_name
     return metrics_df
 
 
-def calculate_embedding_metrics_for_all(cosine_sim, soft_cosine_sim, euclidean_sim, tags, embedding_model: str, data_source: str):
+def calculate_embedding_metrics_for_all(cosine_sim, soft_cosine_sim, euclidean_sim, tags, embedding_model: str, data_source: str, agg_method):
     tag_dict = group_by_tags(tags)
 
-    cosine_metrics_df = calculate_metrics(cosine_sim, tag_dict, 'cosine', embedding_model, data_source)
-    soft_cosine_metrics_df = calculate_metrics(soft_cosine_sim, tag_dict, 'soft_cosine', embedding_model, data_source)
-    euclidean_metrics_df = calculate_metrics(euclidean_sim, tag_dict, 'euclidean', embedding_model, data_source)
+    cosine_metrics_df = calculate_metrics(cosine_sim, tag_dict, 'cosine', embedding_model, data_source, agg_method)
+    soft_cosine_metrics_df = calculate_metrics(soft_cosine_sim, tag_dict, 'soft_cosine', embedding_model, data_source, agg_method)
+    euclidean_metrics_df = calculate_metrics(euclidean_sim, tag_dict, 'euclidean', embedding_model, data_source, agg_method)
 
     all_metrics_df = pd.concat([cosine_metrics_df, soft_cosine_metrics_df, euclidean_metrics_df], ignore_index=True)
 
     return all_metrics_df
 
 
-# ---------------------------- Clusters
+def get_embedding_similarity_metrics_per_dataset(dataset_name, dataset_tags, model_names, agg_methods):
+    dataframes = []
+
+    for model_name in model_names:
+        for agg_method in agg_methods:
+            embeddings = utils.load_from_pickle(f"embeddings/{dataset_name}_{model_name}_{agg_method}_n10000.pickle")
+            cosine_sim, soft_cosine_sim, euclidean_sim = sim.get_all_similarities(embeddings)
+            dataframes.append(calculate_embedding_metrics_for_all(cosine_sim, soft_cosine_sim, euclidean_sim,
+                                            dataset_tags, model_name, dataset_name, agg_method))
+    
+    return pd.concat(dataframes)
+
+
+# --------------------------------------------------------
+# ---------------------- Clusters-------------------------
+# --------------------------------------------------------
 
 def get_tags_count(tags):
     flattened_tags = [tag for sublist in tags for tag in sublist]
@@ -237,4 +262,133 @@ def compare_cluster_metrics(dataset, embedding_models, clusterer_functions, ids,
     results_df = pd.DataFrame(results)
     return results_df
 
+
+# --------------------------------------------------------
+# -------------------- Graph Separation ------------------
+# --------------------------------------------------------
+
+def bfs_tag_connectivity(G, max_depth=3):
+    """
+    Perform BFS to calculate tag connectivity at various depths.
+    
+    Parameters:
+    G (Graph): The networkx graph with nodes having a 'tags' attribute.
+    max_depth (int): The maximum depth for BFS.
+    
+    Returns:
+    dict: A dictionary with depths as keys and tuples as values, where each tuple contains
+          the number of nodes that share one or more tags and the percentage of such nodes.
+    """
+    connectivity = {depth: (0, 0) for depth in range(1, max_depth + 1)}
+    visited = set()
+
+    for node in G.nodes():
+        if node in visited:
+            continue
+        visited.add(node)
+        queue = deque([(node, 0)])
+        level_nodes = defaultdict(set)
+
+        while queue:
+            current_node, depth = queue.popleft()
+            if depth > max_depth:
+                break
+
+            for neighbor in G.neighbors(current_node):
+                if neighbor not in visited:
+                    visited.add(neighbor)
+                    queue.append((neighbor, depth + 1))
+                    shared_tags = set(G.nodes[current_node]['tags']) & set(G.nodes[neighbor]['tags'])
+                    if shared_tags:
+                        level_nodes[depth + 1].add(neighbor)
+
+        for depth in level_nodes:
+            connectivity[depth] = (
+                connectivity[depth][0] + len(level_nodes[depth]),
+                (connectivity[depth][0] + len(level_nodes[depth])) / G.number_of_nodes()
+            )
+
+    return connectivity
+
+def degree_of_separation(G):
+    """
+    Calculate the degree of separation between nodes that share one or more tags.
+    
+    Parameters:
+    G (Graph): The networkx graph with nodes having a 'tags' attribute.
+    
+    Returns:
+    float: The average degree of separation between nodes that share one or more tags.
+    """
+    path_lengths = []
+
+    for node in G.nodes():
+        for neighbor in G.nodes():
+            if node != neighbor and set(G.nodes[node]['tags']) & set(G.nodes[neighbor]['tags']):
+                try:
+                    length = nx.shortest_path_length(G, source=node, target=neighbor, weight='weight')
+                    path_lengths.append(length)
+                except nx.NetworkXNoPath:
+                    continue
+
+    if path_lengths:
+        return np.mean(path_lengths)
+    else:
+        return float('inf')  # If no paths are found
+
+def calculate_edge_assignment_metrics(G, max_depth=3):
+    """
+    Calculate edge assignment metrics.
+    
+    Parameters:
+    G (Graph): The networkx graph with nodes having a 'tags' attribute.
+    max_depth (int): The maximum depth for BFS.
+    
+    Returns:
+    dict: A dictionary containing the edge assignment metrics.
+    """
+    tag_connectivity = bfs_tag_connectivity(G, max_depth)
+    separation_degree = degree_of_separation(G)
+
+    metrics = {
+        'tag_connectivity': tag_connectivity,
+        'degree_of_separation': separation_degree
+    }
+
+    return metrics
+
+
+def compare_edge_assignment_metrics(dataset_name, embedding_models, agg_methods, clusterer_functions, edge_constructor_functions, ids, tags, titles, max_depth=3):
+    results = []
+
+    for embedding_model in embedding_models:
+        for agg_method in agg_methods:
+            embeddings = utils.load_from_pickle(f"embeddings/{dataset_name}_{embedding_model}_{agg_method}_n10000.pickle")
+            cosine_sim, soft_cosine_sim, euclidean_sim = sim.get_all_similarities(embeddings)
+            for sim_mat, sim_metric in zip([cosine_sim, soft_cosine_sim, euclidean_sim], ["cosine", "soft_cosine", "euclidean"]):
+                for edge_name, edge_f in edge_constructor_functions:
+                    for clusterer_name, clusterer_f in clusterer_functions.items():
+                        G = pipe.cluster_and_connect(embeddings, sim_mat, ids, sim_metric, edge_f, clusterer_f, agg.mean_pooling, tags, titles)
+                        utils.save_graph_to_pickle(G, f"graphs/{dataset_name}_{embedding_model}_{sim_metric}_{agg_method}_{edge_name}_{clusterer_name}.pickle")
+                        
+                        metrics = calculate_edge_assignment_metrics(G, max_depth)
+
+                        tag_connectivity = metrics['tag_connectivity']
+                        degree_of_separation = metrics['degree_of_separation']
+
+                        for depth, (connected_nodes, percentage) in tag_connectivity.items():
+                            results.append({
+                                'embedding_model': embedding_model,
+                                'agg_method': agg_method,
+                                'similarity': sim_metric,
+                                'edge constructor': edge_name,
+                                'clusterer': clusterer_name,
+                                'depth': depth,
+                                'connected_nodes': connected_nodes,
+                                'percentage_connected': round(percentage, 3),
+                                'degree_of_separation': degree_of_separation
+                            })
+
+    results_df = pd.DataFrame(results)
+    return results_df
     

@@ -13,6 +13,8 @@ data/arxiv*
 data/medium*
 data/interview_prep.csv
 
+analysis/
+
 graphs/old/
 
 # Byte-compiled / optimized / DLL files
