@@ -27,7 +27,7 @@ def add_cluster_node(G, similarity_metric, aggregator_f, **kwargs):
 
     G.add_node(cluster_node_id, **cluster_node)
 
-    similarity_scores = ss.batch_similarity_scores(embeddings, similarity_metric)[-1] 
+    similarity_scores = ss.batch_similarity_scores(embeddings, similarity_metric)[-1] # pyright: ignore 
 
     weighted_edges = []
     for i, node_id in enumerate(G.nodes):
@@ -77,8 +77,8 @@ def connect_cluster_nodes(G, similarity_metric, edge_constructor_f, aggregator_f
     embeddings = torch.cat((embeddings, top_node_embedding.unsqueeze(0)), dim=0)
     similarity_scores = ss.batch_similarity_scores(embeddings, similarity_metric)
 
-    top_node_scores = similarity_scores[-1]
-    remaining_scores = similarity_scores[:-1, :-1]
+    top_node_scores = similarity_scores[-1] # pyright: ignore 
+    remaining_scores = similarity_scores[:-1, :-1] # pyright: ignore 
 
     edges = edge_constructor_f(remaining_scores, cluster_node_ids)
 

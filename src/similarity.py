@@ -62,12 +62,12 @@ def batch_similarity_scores(matrix, metric="cosine", batch_size=256, sigma=1.0):
         if similarity_matrix is None:
             similarity_matrix = batch_similarity_matrix
         else:
-            if similarity_matrix.size(1) != batch_similarity_matrix.size(1):
-                difference = similarity_matrix.size(1) - batch_similarity_matrix.size(1)
+            if similarity_matrix.size(1) != batch_similarity_matrix.size(1): # pyright: ignore
+                difference = similarity_matrix.size(1) - batch_similarity_matrix.size(1) # pyright: ignore
                 padding = (0, abs(difference)) if difference < 0 else (0, 0)
-                batch_similarity_matrix = F.pad(batch_similarity_matrix, padding)
+                batch_similarity_matrix = F.pad(batch_similarity_matrix, padding) # pyright: ignore
                 similarity_matrix = F.pad(similarity_matrix, (-difference, 0))
-            similarity_matrix = torch.cat((similarity_matrix, batch_similarity_matrix))
+            similarity_matrix = torch.cat((similarity_matrix, batch_similarity_matrix)) # pyright: ignore
 
     return similarity_matrix
 
@@ -80,13 +80,13 @@ def get_all_similarities(embeddings, sigma=1.0):
     return cosine_similarity, soft_cosine_similarity, euclidean_similarity
 
 
-document_embeddings = torch.randn(100, 300)  # Example document embeddings
-feature_similarity = compute_feature_similarity(document_embeddings)
+# document_embeddings = torch.randn(100, 300)  # Example document embeddings
+# feature_similarity = compute_feature_similarity(document_embeddings)
 
-batch0 = document_embeddings[:10]  # First 10 samples
-batch1 = document_embeddings[10:20]  # Next 10 samples
+# batch0 = document_embeddings[:10]  # First 10 samples
+# batch1 = document_embeddings[10:20]  # Next 10 samples
 
-cosine_sim, soft_cos_sim, euclidean_sim = get_all_similarities(document_embeddings)
-print("Cosine Similarity:\n", cosine_sim)
-print("Soft Cosine Similarity:\n", soft_cos_sim)
-print("Euclidean Similarity:\n", euclidean_sim)
+# cosine_sim, soft_cos_sim, euclidean_sim = get_all_similarities(document_embeddings)
+# print("Cosine Similarity:\n", cosine_sim)
+# print("Soft Cosine Similarity:\n", soft_cos_sim)
+# print("Euclidean Similarity:\n", euclidean_sim)

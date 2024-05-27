@@ -5,8 +5,12 @@ import networkx as nx
 from scipy import stats
 from collections import Counter, defaultdict
 from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.metrics.cluster import homogeneity_score, completeness_score
+import matplotlib.pyplot as plt
+import seaborn as sns
 
-import pandas as pd
+
+import src.utils as utils
 
 # ------------------------------------------------------------
 # -------------------------- Helpers -------------------------
@@ -169,6 +173,139 @@ def calculate_embedding_metrics_for_all(cosine_sim, soft_cosine_sim, euclidean_s
 
     return all_metrics_df
 
+
+def visualize_embeddings_comparisons(dataframes: list[pd.DataFrame]):
+    """
+    Visualizes comparisons between all nodes and shared tags for multiple dataframes.
+
+    Args:
+        dataframes (List[pd.DataFrame]): A list of dataframes to be combined and visualized.
+    """
+    # Combine the dataframes
+    combined_df = pd.concat(dataframes, ignore_index=True)
+
+    # Melt the dataframe to have 'between_all_nodes' and 'between_shared_tags' in a single column
+    melted_df = combined_df.melt(id_vars=['data_source', 'embedding_model', 'metric_name', 'metric'], 
+                                 value_vars=['between_all_nodes', 'between_shared_tags'], 
+                                 var_name='comparison_type', value_name='value')
+
+    # Set up the matplotlib figure with multiple subplots
+    fig, axes = plt.subplots(3, 1, figsize=(14, 18))
+
+    # Bar plot for mean, median, std_dev comparison
+    sns.barplot(data=melted_df[melted_df['metric'] == 'mean'], x='metric_name', y='value', hue='comparison_type', errorbar=None, ax=axes[0])
+    axes[0].set_title('Mean Comparison Between All Nodes and Shared Tags')
+    axes[0].set_xlabel('Metric Name')
+    axes[0].set_ylabel('Value')
+    axes[0].legend(title='Comparison Type')
+
+    sns.barplot(data=melted_df[melted_df['metric'] == 'median'], x='metric_name', y='value', hue='comparison_type', errorbar=None, ax=axes[1])
+    axes[1].set_title('Median Comparison Between All Nodes and Shared Tags')
+    axes[1].set_xlabel('Metric Name')
+    axes[1].set_ylabel('Value')
+    axes[1].legend(title='Comparison Type')
+
+    sns.barplot(data=melted_df[melted_df['metric'] == 'std_dev'], x='metric_name', y='value', hue='comparison_type', errorbar=None, ax=axes[2])
+    axes[2].set_title('Standard Deviation Comparison Between All Nodes and Shared Tags')
+    axes[2].set_xlabel('Metric Name')
+    axes[2].set_ylabel('Value')
+    axes[2].legend(title='Comparison Type')
+
+    # Adjust layout
+    plt.tight_layout()
+    plt.show()
+    # Create separate plots for each embedding model for clarity
+    for model in combined_df['embedding_model'].unique():
+        model_df = melted_df[melted_df['embedding_model'] == model]
+        
+        # Line plot for each model
+        plt.figure(figsize=(14, 8))
+        sns.lineplot(data=model_df, x='metric_name', y='value', hue='comparison_type', style='metric', markers=True, errorbar=None)
+        plt.title(f'Metric Trends Comparison for {model}')
+        plt.xlabel('Metric Name')
+        plt.ylabel('Value')
+        plt.legend(title='Comparison Type')
+        plt.show()
+
+# ------------------------------------------------------------
+# ---------------------- Cluster Testing ---------------------
+# ------------------------------------------------------------
+
+def get_tags_count(tags):
+    flattened_tags = [tag for sublist in tags for tag in sublist]
+    tag_counts = Counter(flattened_tags)
+    return tag_counts
+
+
+def get_clusters_with_tags(embeddings, tags, clusterer_f):
+    cluster_labels = clusterer_f(embeddings)
+    clusters = utils.group_into_clusters(cluster_labels, [tag for sublist in tags for tag in sublist])
+    return clusters
+
+
+def calculate_homogeneity(cluster_tags, total_tag_counts):
+    # Flatten the cluster tags into a list of true labels and predicted clusters
+    true_labels = []
+    predicted_clusters = []
+
+    for cluster_id, tags in cluster_tags.items():
+        for tag in tags:
+            true_labels.append(tag)
+            predicted_clusters.append(cluster_id)
+
+    return homogeneity_score(true_labels, predicted_clusters)
+
+
+def calculate_completeness(cluster_tags, total_tag_counts):
+    # Flatten the cluster tags into a list of true labels and predicted clusters
+    true_labels = []
+    predicted_clusters = []
+
+    for cluster_id, tags in cluster_tags.items():
+        for tag in tags:
+            true_labels.append(tag)
+            predicted_clusters.append(cluster_id)
+
+    return completeness_score(true_labels, predicted_clusters)
+
+
+def calculate_cluster_purity_for_popular_tags(cluster_tags, total_tag_counts, K):
+    # Identify the K most popular tags
+    most_popular_tags = [tag for tag, count in Counter(total_tag_counts).most_common(K)]
+    
+    purity_scores = {}
+    
+    for tag in most_popular_tags:
+        max_cluster_count = 0
+        max_cluster_id = None
+        
+        for cluster_id, tags in cluster_tags.items():
+            tag_count_in_cluster = tags.count(tag)
+            if tag_count_in_cluster > max_cluster_count:
+                max_cluster_count = tag_count_in_cluster
+                max_cluster_id = cluster_id
+        
+        if max_cluster_id is not None:
+            purity_score = max_cluster_count / total_tag_counts[tag]
+            purity_scores[tag] = purity_score
+    
+    return purity_scores
+
+
+def calculate_metrics_dataframe(cluster_tags, total_tag_counts, k=2):
+    homogeneity = calculate_homogeneity(cluster_tags, total_tag_counts)
+    completeness = calculate_completeness(cluster_tags, total_tag_counts)
+    purity_scores = calculate_cluster_purity_for_popular_tags(cluster_tags, total_tag_counts, k)
+
+    # Convert purity_scores to a list of dictionaries for the DataFrame
+    purity_scores_list = [{"Tag": tag, "Purity": purity} for tag, purity in purity_scores.items()]
+
+    # Create the DataFrame
+    metrics_df = pd.DataFrame(purity_scores_list)
+    metrics_df["Homogeneity"] = homogeneity
+    metrics_df["Completeness"] = completeness
+
+    return metrics_df
 
 # ------------------------------------------------------------
 # ----------------------- Graph Testing ----------------------

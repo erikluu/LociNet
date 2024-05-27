@@ -45,18 +45,18 @@ def initialize_specter_base_model() -> Tuple[Any, Any, int]:
     max_length = 512
     return tokenizer, model, max_length
 
-def initialize_llama_model() -> Tuple[Any, Any, int]:
-    print("Initializing Llama Model")
-    tokenizer = AutoTokenizer.from_pretrained("McGill-NLP/LLM2Vec-Meta-Llama-3-8B-Instruct-mntp", trust_remote_code=True)
-    model = AutoModel.from_pretrained("McGill-NLP/LLM2Vec-Meta-Llama-3-8B-Instruct-mntp", trust_remote_code=True)
-    model.eval()
-    max_length = tokenizer.model_max_length
-    return tokenizer, model, max_length 
+# def initialize_llama_model() -> Tuple[Any, Any, int]:
+#     print("Initializing Llama Model")
+#     tokenizer = AutoTokenizer.from_pretrained("deerslab/llama-7b-embeddings", trust_remote_code=True)
+#     model = AutoModel.from_pretrained("deerslab/llama-7b-embeddings", trust_remote_code=True)
+#     model.eval()
+#     max_length = tokenizer.model_max_length
+#     return tokenizer, model, max_length 
 
 def initialize_word2vec_model() -> Word2Vec:
     print("Initializing Word2Vec Model")
     model = api.load("word2vec-google-news-300")
-    return model
+    return model # pyright: ignore
 
 # -----------------
 # Mean Pooling Functions
@@ -125,6 +125,7 @@ def get_embeddings(input: List[str], tokenizer: type[Any], model: type[AutoModel
 def get_word2vec_embeddings(input: List[List[str]], model: Word2Vec) -> torch.Tensor:
     """Get Word2Vec embeddings for a list of documents."""
     document_embeddings = [document_to_vector(model, doc) for doc in input]
+    document_embeddings = np.array(document_embeddings)
     return torch.tensor(document_embeddings)
 
 def batch_embeddings(input: List[str], tokenizer: type[AutoTokenizer], model: type[AutoModel], batch_size: int = 32, save_path: str = "", max_length: int = 512) -> torch.Tensor:
@@ -173,8 +174,8 @@ def get_model_and_pooling_func(model_name: str) -> Tuple[Any, Any, int]:
         tokenizer, model, max_length = initialize_google_bert_model()
     elif model_name == "specter":
         tokenizer, model, max_length = initialize_specter_base_model()
-    elif model_name == "llama":
-        tokenizer, model, max_length = initialize_llama_model()
+    # elif model_name == "llama":
+    #     tokenizer, model, max_length = initialize_llama_model()
     elif model_name == "word2vec":
         model = initialize_word2vec_model()
         return None, model, None  # pyright: ignore Word2Vec doesn't use tokenizer and max_length
