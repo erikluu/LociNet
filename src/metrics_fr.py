@@ -233,31 +233,33 @@ def calculate_cluster_tag_purity(docs_by_cluster, tag_counts, total_docs, k):
     return purity_scores
 
 
-def compare_cluster_metrics(dataset, embedding_models, clusterer_functions, ids, tags, k):
+def compare_cluster_metrics(dataset, embedding_models, agg_methods, clusterer_functions, ids, tags, k):
     results = []
 
     tag_counts = get_tags_count(tags)
     total_docs = sum(tag_counts.values())
 
     for embedding_model in embedding_models:
-        embeddings = utils.load_from_pickle(f"embeddings/{dataset}_{embedding_model}_n10000.pickle")
-        for clusterer_name, clusterer_f in clusterer_functions.items():
-            ids_by_cluster = ids_by_clusters(embeddings, ids, clusterer_f)
-            tags_by_cluster = tags_by_clusters(ids_by_cluster, tags)
-            
-            homogeneity = round(calculate_homogeneity(tags_by_cluster), 3)
-            completeness = round(calculate_completeness(tags_by_cluster), 3)
-            tag_concentration_purity = calculate_tag_concentration_purity(tags_by_cluster, tag_counts, k)
-            cluster_tag_purity = calculate_cluster_tag_purity(tags_by_cluster, tag_counts, total_docs, k)
+        for agg_method in agg_methods:
+            embeddings = utils.load_from_pickle(f"embeddings/{dataset}_{embedding_model}_{agg_method}_n10000.pickle")
+            for clusterer_name, clusterer_f in clusterer_functions.items():
+                ids_by_cluster = ids_by_clusters(embeddings, ids, clusterer_f)
+                tags_by_cluster = tags_by_clusters(ids_by_cluster, tags)
+                
+                homogeneity = round(calculate_homogeneity(tags_by_cluster), 3)
+                completeness = round(calculate_completeness(tags_by_cluster), 3)
+                tag_concentration_purity = calculate_tag_concentration_purity(tags_by_cluster, tag_counts, k)
+                cluster_tag_purity = calculate_cluster_tag_purity(tags_by_cluster, tag_counts, total_docs, k)
 
-            results.append({
-                'embedding_model': embedding_model,
-                'clusterer': clusterer_name,
-                'homogeneity': homogeneity,
-                'completeness': completeness,
-                'tag_concentration_purity': tag_concentration_purity,
-                'cluster_tag_purity': cluster_tag_purity
-            })
+                results.append({
+                    'embedding_model': embedding_model,
+                    'agg_method': agg_method,
+                    'clusterer': clusterer_name,
+                    'homogeneity': homogeneity,
+                    'completeness': completeness,
+                    'tag_concentration_purity': tag_concentration_purity,
+                    'cluster_tag_purity': cluster_tag_purity
+                })
 
     results_df = pd.DataFrame(results)
     return results_df
@@ -291,8 +293,8 @@ def bfs_tag_connectivity(G, max_depth=3):
 
         while queue:
             current_node, depth = queue.popleft()
-            if depth > max_depth:
-                break
+            if depth >= max_depth:
+                continue
 
             for neighbor in G.neighbors(current_node):
                 if neighbor not in visited:
@@ -308,7 +310,11 @@ def bfs_tag_connectivity(G, max_depth=3):
                 (connectivity[depth][0] + len(level_nodes[depth])) / G.number_of_nodes()
             )
 
+    # Remove depth keys that have no connected nodes
+    connectivity = {depth: value for depth, value in connectivity.items() if value[0] > 0}
+    
     return connectivity
+
 
 def degree_of_separation(G):
     """
@@ -366,7 +372,7 @@ def compare_edge_assignment_metrics(dataset_name, embedding_models, agg_methods,
             embeddings = utils.load_from_pickle(f"embeddings/{dataset_name}_{embedding_model}_{agg_method}_n10000.pickle")
             cosine_sim, soft_cosine_sim, euclidean_sim = sim.get_all_similarities(embeddings)
             for sim_mat, sim_metric in zip([cosine_sim, soft_cosine_sim, euclidean_sim], ["cosine", "soft_cosine", "euclidean"]):
-                for edge_name, edge_f in edge_constructor_functions:
+                for edge_name, edge_f in edge_constructor_functions.items():
                     for clusterer_name, clusterer_f in clusterer_functions.items():
                         G = pipe.cluster_and_connect(embeddings, sim_mat, ids, sim_metric, edge_f, clusterer_f, agg.mean_pooling, tags=tags, titles=titles)
                         utils.save_graph_to_pickle(G, f"graphs/{dataset_name}_{embedding_model}_{sim_metric}_{agg_method}_{edge_name}_{clusterer_name}.pickle")
