@@ -123,30 +123,6 @@ def calculate_completeness(tags_by_cluster):
     return completeness_score(true_labels, predicted_clusters)
 
 
-
-def compare_completeness_homogeneity(dataset, embedding_models, clusterer_functions, ids, tags):
-    results = []
-
-    for embedding_model in embedding_models:
-        embeddings = utils.load_from_pickle(f"embeddings/{dataset}_{embedding_model}_n10000.pickle")
-        for clusterer_name, clusterer_f in clusterer_functions.items():
-            ids_by_cluster = ids_by_clusters(embeddings, ids, clusterer_f)
-            tags_by_cluster = tags_by_clusters(ids_by_cluster, tags)
-
-            homogeneity = round(calculate_homogeneity(tags_by_cluster), 3)
-            completeness = round(calculate_completeness(tags_by_cluster), 3)
-
-            results.append({
-                'embedding_model': embedding_model,
-                'clusterer': clusterer_name,
-                'homogeneity': homogeneity,
-                'completeness': completeness
-            })
-
-    results_df = pd.DataFrame(results)
-    return results_df
-
-
 def calculate_tag_concentration_purity(docs_by_cluster, tag_counts, k):
     """
     Calculate the Tag Concentration Purity.
@@ -232,7 +208,7 @@ def calculate_cluster_tag_purity(docs_by_cluster, tag_counts, total_docs, k):
     return purity_scores
 
 
-def compare_purity_metrics(dataset, embedding_models, clusterer_functions, ids, tags, k):
+def compare_cluster_metrics(dataset, embedding_models, clusterer_functions, ids, tags, k):
     results = []
 
     tag_counts = get_tags_count(tags)
@@ -244,12 +220,16 @@ def compare_purity_metrics(dataset, embedding_models, clusterer_functions, ids, 
             ids_by_cluster = ids_by_clusters(embeddings, ids, clusterer_f)
             tags_by_cluster = tags_by_clusters(ids_by_cluster, tags)
             
+            homogeneity = round(calculate_homogeneity(tags_by_cluster), 3)
+            completeness = round(calculate_completeness(tags_by_cluster), 3)
             tag_concentration_purity = calculate_tag_concentration_purity(tags_by_cluster, tag_counts, k)
             cluster_tag_purity = calculate_cluster_tag_purity(tags_by_cluster, tag_counts, total_docs, k)
 
             results.append({
                 'embedding_model': embedding_model,
                 'clusterer': clusterer_name,
+                'homogeneity': homogeneity,
+                'completeness': completeness,
                 'tag_concentration_purity': tag_concentration_purity,
                 'cluster_tag_purity': cluster_tag_purity
             })
