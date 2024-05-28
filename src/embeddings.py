@@ -332,7 +332,7 @@ if __name__ == "__main__":
                 print(f"Processing {model_name} with {pooling_strategy} pooling")
                 embeddings = process_embeddings(input_texts, model_name, pooling_strategy)
 
-                save_to_pickle(embeddings, f"embeddings/{dataset_name}_{model_name}_{pooling_strategy}_n10000.pickle")
+                save_to_pickle(embeddings, f"embeddings/{dataset_name}_{model_name}_{pooling_strategy}_n5000.pickle")
 
-    data = load_data("data/medium_1k_tags_simplified.csv", n=10000)
+    data = load_data("data/medium_1k_tags_simplified.csv", n=5000)
     run("medium1k", data["text"])
