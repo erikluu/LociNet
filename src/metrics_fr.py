@@ -374,6 +374,7 @@ def compare_edge_assignment_metrics(dataset_name, embedding_models, agg_methods,
             for sim_mat, sim_metric in zip([cosine_sim, soft_cosine_sim, euclidean_sim], ["cosine", "soft_cosine", "euclidean"]):
                 for edge_name, edge_f in edge_constructor_functions.items():
                     for clusterer_name, clusterer_f in clusterer_functions.items():
+                        print(f"graphs/{dataset_name}_{embedding_model}_{sim_metric}_{agg_method}_{edge_name}_{clusterer_name}")
                         G = pipe.cluster_and_connect(embeddings, sim_mat, ids, sim_metric, edge_f, clusterer_f, agg.mean_pooling, tags=tags, titles=titles)
                         utils.save_graph_to_pickle(G, f"graphs/{dataset_name}_{embedding_model}_{sim_metric}_{agg_method}_{edge_name}_{clusterer_name}.pickle")
                         

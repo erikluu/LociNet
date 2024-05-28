@@ -1,6 +1,7 @@
 import torch
 import itertools
 import networkx as nx
+import numpy as np
 
 import src.utils as utils
 import src.similarity as ss
