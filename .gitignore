@@ -20,6 +20,8 @@ embeddings/medium1k_word2vec*
 
 graphs/old/
 
+graphs/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

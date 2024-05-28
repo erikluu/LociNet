@@ -76,7 +76,8 @@ def batch_similarity_scores(matrix, metric="cosine", batch_size=256, sigma=1.0):
     n = matrix.size(0)
     similarity_matrix = None
 
-    for i in tqdm(range(0, n, batch_size), desc=f"Calculating {metric} similarities"):
+    # for i in tqdm(range(0, n, batch_size), desc=f"Calculating {metric} similarities"):
+    for i in range(0, n, batch_size):
         batch0 = matrix[i:i + batch_size]
         batch_similarity_matrix = None
 

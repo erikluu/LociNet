@@ -110,8 +110,7 @@ def group_into_clusters(labels, data):
     return groups
 
 
-def ids_by_clusters(embeddings, ids, clusterer_f):
-    cluster_labels = clusterer_f(embeddings)
+def ids_by_clusters(cluster_labels, ids):
     ids_by_cluster = group_into_clusters(cluster_labels, ids)
     return ids_by_cluster
 
@@ -243,7 +242,24 @@ def compare_cluster_metrics(dataset, embedding_models, agg_methods, clusterer_fu
         for agg_method in agg_methods:
             embeddings = utils.load_from_pickle(f"embeddings/{dataset}_{embedding_model}_{agg_method}_n10000.pickle")
             for clusterer_name, clusterer_f in clusterer_functions.items():
-                ids_by_cluster = ids_by_clusters(embeddings, ids, clusterer_f)
+                try:
+                    cluster_labels = clusterer_f(embeddings)
+                except:
+                    cluster_labels = None
+                if cluster_labels is None:
+                    print(f"Skipping {embedding_model}, {agg_method}, {clusterer_name} due to insufficient samples")
+                    results.append({
+                        'embedding_model': embedding_model,
+                        'agg_method': agg_method,
+                        'clusterer': clusterer_name,
+                        'homogeneity': None,
+                        'completeness': None,
+                        'tag_concentration_purity': None,
+                        'cluster_tag_purity': None
+                    })
+                    continue
+                
+                ids_by_cluster = ids_by_clusters(cluster_labels, ids)
                 tags_by_cluster = tags_by_clusters(ids_by_cluster, tags)
                 
                 homogeneity = round(calculate_homogeneity(tags_by_cluster), 3)
@@ -263,6 +279,7 @@ def compare_cluster_metrics(dataset, embedding_models, agg_methods, clusterer_fu
 
     results_df = pd.DataFrame(results)
     return results_df
+
 
 
 # --------------------------------------------------------
@@ -375,7 +392,21 @@ def compare_edge_assignment_metrics(dataset_name, embedding_models, agg_methods,
                 for edge_name, edge_f in edge_constructor_functions.items():
                     for clusterer_name, clusterer_f in clusterer_functions.items():
                         print(f"graphs/{dataset_name}_{embedding_model}_{sim_metric}_{agg_method}_{edge_name}_{clusterer_name}")
-                        G = pipe.cluster_and_connect(embeddings, sim_mat, ids, sim_metric, edge_f, clusterer_f, agg.mean_pooling, tags=tags, titles=titles)
+                        try:
+                            G = pipe.cluster_and_connect(embeddings, sim_mat, ids, sim_metric, edge_f, clusterer_f, agg.mean_pooling, tags=tags, titles=titles)
+                        except:
+                            results.append({
+                                'embedding_model': embedding_model,
+                                'agg_method': agg_method,
+                                'similarity': sim_metric,
+                                'edge constructor': edge_name,
+                                'clusterer': clusterer_name,
+                                'depth': None,
+                                'connected_nodes': None,
+                                'percentage_connected': None,
+                                'degree_of_separation': None
+                            })
+
                         utils.save_graph_to_pickle(G, f"graphs/{dataset_name}_{embedding_model}_{sim_metric}_{agg_method}_{edge_name}_{clusterer_name}.pickle")
                         
                         metrics = calculate_edge_assignment_metrics(G, max_depth)
